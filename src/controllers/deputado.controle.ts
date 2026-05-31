@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { DeputadoService } from "@/services/deputado.service";
+import { Despesa } from "@/models/despesa.model";
+import { ProposicaoAutor } from "@/models/proposicaoAutor.model";
 
 export class DeputadoController {
     private readonly deputadoService: DeputadoService;
@@ -9,7 +11,10 @@ export class DeputadoController {
     }
 
     async findAll(req: Request, res: Response): Promise<void> {
-        const deputados = await this.deputadoService.findAll();
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+
+        const deputados = await this.deputadoService.findAll(page, limit);
         res.json(deputados);
     }
 

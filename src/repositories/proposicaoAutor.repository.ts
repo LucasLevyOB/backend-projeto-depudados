@@ -8,4 +8,8 @@ export class ProposicaoAutorRepository {
     async findByDeputadoId(idDeputadoAutor: number): Promise<IProposicaoAutor[]> {
         return await ProposicaoAutor.find({ idDeputadoAutor });
     }
+
+    async countProjetosByDeputadoId(idDeputadoAutor: number): Promise<number> {
+        return await ProposicaoAutor.countDocuments({ idDeputadoAutor });
+    }
 }

@@ -30,6 +30,7 @@ export interface IDespesa {
     datPagamentoRestituicao: string;
     restituicao: string;
     numeroDeputadoID: number;
+    idDeputado?: number;
     idDocumento: number;
     urlDocumento: string;
 }
@@ -64,6 +65,7 @@ const DespesaSchema: Schema = new Schema({
     datPagamentoRestituicao: { type: String },
     restituicao: { type: String },
     numeroDeputadoID: { type: Number, index: true },
+    idDeputado: { type: Number, index: true },
     idDocumento: { type: Number },
     urlDocumento: { type: String }
 });

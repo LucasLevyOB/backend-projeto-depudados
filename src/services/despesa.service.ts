@@ -11,4 +11,8 @@ export class DespesaService {
     async findAll(): Promise<IDespesa[]> {
         return await this.repositorio.findAll();
     }
+
+    async getTotalGastosByDeputado(idDeputado: number): Promise<number> {
+        return await this.repositorio.getTotalGastosByDeputado(idDeputado);
+    }
 }

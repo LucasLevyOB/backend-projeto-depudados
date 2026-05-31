@@ -6,20 +6,25 @@ import { ProposicaoAutorRepository } from "@/repositories/proposicaoAutor.reposi
 import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoRepository } from "@/repositories/proposicao.repository";
 import { ProposicaoService } from "@/services/proposicao.service";
+import { DespesaRepository } from "@/repositories/despesa.repository";
+import { DespesaService } from "@/services/despesa.service";
 
 const router = Router();
 
 const deputadoRepository = new DeputadoRepository();
 const proposicaoAutorRepository = new ProposicaoAutorRepository();
 const proposicaoRepository = new ProposicaoRepository();
+const despesaRepository = new DespesaRepository();
 
 const proposicaoAutorService = new ProposicaoAutorService(proposicaoAutorRepository);
 const proposicaoService = new ProposicaoService(proposicaoRepository);
+const despesaService = new DespesaService(despesaRepository);
 
 const deputadoService = new DeputadoService(
-    deputadoRepository, 
-    proposicaoAutorService, 
-    proposicaoService
+    deputadoRepository,
+    proposicaoAutorService,
+    proposicaoService,
+    despesaService
 );
 const deputadoController = new DeputadoController(deputadoService);
 
