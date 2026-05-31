@@ -1,45 +1,71 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model } from 'mongoose';
 
-export interface IDespesa extends Document {
-    idDeputado: number;
-    ano: number;
-    cnpjCpfFornecedor: string;
-    codDocumento: string;
-    codLote: number;
-    codTipoDocumento: number;
-    dataDocumento: Date;
-    mes: number;
-    nomeFornecedor: string;
-    numDocumento: string;
-    numRessarcimento: string;
-    parcela: number;
-    tipoDespesa: string;
+export interface IDespesa {
+    nomeParlamentar: string;
+    cpf: string;
+    numeroCarteiraParlamentar: string;
+    legislatura: number;
+    siglaUF: string;
+    siglaPartido: string;
+    codigoLegislatura: number;
+    numeroSubCota: number;
+    descricao: string;
+    numeroEspecificacaoSubCota: number;
+    descricaoEspecificacao: string;
+    fornecedor: string;
+    cnpjCPF: string;
+    numero: string;
     tipoDocumento: string;
+    dataEmissao: Date;
+    valorDocumento: string;
+    valorGlosa: string;
+    valorLiquido: string;
+    mes: number;
+    ano: number;
+    parcela: number;
+    passageiro: string;
+    trecho: string;
+    lote: string;
+    ressarcimento: string;
+    datPagamentoRestituicao: string;
+    restituicao: string;
+    numeroDeputadoID: number;
+    idDocumento: number;
     urlDocumento: string;
-    valorDocumento: number;
-    valorGlosa: number;
-    valorLiquido: number;
 }
 
 const DespesaSchema: Schema = new Schema({
-    idDeputado: { type: Number, required: true, index: true },
-    ano: { type: Number },
-    cnpjCpfFornecedor: { type: String },
-    codDocumento: { type: String },
-    codLote: { type: Number },
-    codTipoDocumento: { type: Number },
-    dataDocumento: { type: Date },
-    mes: { type: Number },
-    nomeFornecedor: { type: String },
-    numDocumento: { type: String },
-    numRessarcimento: { type: String },
-    parcela: { type: Number },
-    tipoDespesa: { type: String },
+    nomeParlamentar: { type: String },
+    cpf: { type: String },
+    numeroCarteiraParlamentar: { type: String },
+    legislatura: { type: Number },
+    siglaUF: { type: String },
+    siglaPartido: { type: String },
+    codigoLegislatura: { type: Number },
+    numeroSubCota: { type: Number },
+    descricao: { type: String },
+    numeroEspecificacaoSubCota: { type: Number },
+    descricaoEspecificacao: { type: String },
+    fornecedor: { type: String },
+    cnpjCPF: { type: String },
+    numero: { type: String },
     tipoDocumento: { type: String },
-    urlDocumento: { type: String },
-    valorDocumento: { type: Number },
-    valorGlosa: { type: Number },
-    valorLiquido: { type: Number },
+    dataEmissao: { type: Date },
+    valorDocumento: { type: String },
+    valorGlosa: { type: String },
+    valorLiquido: { type: String },
+    mes: { type: Number },
+    ano: { type: Number },
+    parcela: { type: Number },
+    passageiro: { type: String },
+    trecho: { type: String },
+    lote: { type: String },
+    ressarcimento: { type: String },
+    datPagamentoRestituicao: { type: String },
+    restituicao: { type: String },
+    numeroDeputadoID: { type: Number, index: true },
+    idDocumento: { type: Number },
+    urlDocumento: { type: String }
 });
 
 export const Despesa = model<IDespesa>('Despesa', DespesaSchema);
