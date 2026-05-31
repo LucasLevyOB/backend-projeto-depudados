@@ -12,4 +12,23 @@ export class DeputadoController {
         const deputados = await this.deputadoService.findAll();
         res.json(deputados);
     }
+
+    async findProposicoes(req: Request, res: Response): Promise<void> {
+        try {
+            const id = Number(req.params.id);
+            const page = Number(req.query.page) || 1;
+            const limit = Number(req.query.limit) || 20;
+
+            if (isNaN(id)) {
+                res.status(400).json({ error: "ID do deputado inválido" });
+                return;
+            }
+
+            const proposicoes = await this.deputadoService.findProposicoes(id, page, limit);
+            res.json(proposicoes);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Erro interno do servidor" });
+        }
+    }
 }

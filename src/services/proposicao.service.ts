@@ -11,4 +11,8 @@ export class ProposicaoService {
     async findAll(): Promise<IProposicao[]> {
         return await this.repositorio.findAll();
     }
+
+    async findByIdsWithPagination(ids: number[], page: number, limit: number): Promise<IProposicao[]> {
+        return await this.repositorio.findByIdsWithPagination(ids, page, limit);
+    }
 }
