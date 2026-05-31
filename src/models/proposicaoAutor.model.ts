@@ -28,6 +28,8 @@ const ProposicaoAutorSchema: Schema = new Schema({
     siglaUFAutor: { type: String },
     ordemAssinatura: { type: String },
     proponente: { type: String }
+}, {
+    collection: 'proposicoesAutores',
 });
 
 export const ProposicaoAutor = model<IProposicaoAutor>('ProposicaoAutor', ProposicaoAutorSchema);
