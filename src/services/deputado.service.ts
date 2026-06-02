@@ -22,27 +22,67 @@ export class DeputadoService {
         this.despesaService = despesaService;
     }
 
-    async findAll(page: number = 1, limit: number = 20): Promise<any[]> {
-        const deputados = await this.repositorio.findAll(page, limit);
+    private readonly PESO_PL = 10;
+    private readonly PESO_PROPOSICAO = 1;
+    /**
+     * Fator de escala para o cálculo do score de eficiência (100 mil reais)
+     */
+    private readonly FATOR_ESCALA = 100000;
 
-        return Promise.all(deputados.map(async (deputado) => {
+    /**
+     * Calcula o score de eficiência do deputado
+     * @param totalProjetos Total de projetos de lei do deputado
+     * @param totalProposicoes Total de proposições do deputado
+     * @param totalGastos Total de gastos do deputado
+     * @returns Score de eficiência do deputado
+     */
+    private calcularScore(totalProjetos: number, totalProposicoes: number, totalGastos: number): number {
+        const outrasProposicoes = totalProposicoes - totalProjetos;
+        const producaoPonderada = (totalProjetos * this.PESO_PL) + (outrasProposicoes * this.PESO_PROPOSICAO);
+        const gastosValidos = totalGastos > 0 ? totalGastos : 1;
+
+        return Math.round((producaoPonderada / gastosValidos) * this.FATOR_ESCALA);
+    }
+
+    /**
+     * Calcula o custo por produção
+     * @param total Total de produção
+     * @param gastos Total de gastos
+     * @returns Custo por produção
+     */
+    private calcularCustoPor(total: number, gastos: number) {
+        return total > 0 ? (gastos / total) : null;
+    }
+
+    async findAll(page: number = 1, limit: number = 20): Promise<any[]> {
+        return await this.repositorio.findAll(page, limit);
+    }
+
+    async syncAllEstatisticas(): Promise<void> {
+        const deputados = await this.repositorio.findAllSync();
+
+        for (const deputado of deputados) {
             const gastosDespesas = await this.despesaService.getGastosDespesasByDeputado(deputado._id);
 
-            // Fazer um join entre os dois serviços para contar apenas Projetos de Lei (codTipo: 139)
             const proposicoesAutorias = await this.proposicaoAutorService.findByDeputadoId(deputado._id);
             const proposicaoIds = proposicoesAutorias.map(a => a.idProposicao);
             const totalProjetos = await this.proposicaoService.countByIdsAndTipo(proposicaoIds, 139);
             const totalProposicoes = proposicaoIds.length;
 
-            return {
-                ...deputado,
-                gastos_despesas: gastosDespesas,
-                projetos_de_lei: totalProjetos,
-                total_proposicoes: totalProposicoes,
-                eficiencia: totalProjetos / gastosDespesas,
-                custo_por_proposicao: gastosDespesas / totalProposicoes
-            };
-        }));
+            const scoreEficiencia = this.calcularScore(totalProjetos, totalProposicoes, gastosDespesas);
+
+            const custoPorPL = this.calcularCustoPor(totalProjetos, gastosDespesas);
+            const custoPorProposicaoGeral = this.calcularCustoPor(totalProposicoes, gastosDespesas);
+
+            await this.repositorio.updateEstatisticas(deputado._id, {
+                gastosDespesas: gastosDespesas,
+                projetosDeLei: totalProjetos,
+                totalProposicoes: totalProposicoes,
+                scoreEficiencia: scoreEficiencia,
+                custoPorProjetoLei: custoPorPL,
+                custoPorProposicao: custoPorProposicaoGeral
+            });
+        }
     }
 
     async findProposicoes(idDeputado: number, page: number = 1, limit: number = 20) {
