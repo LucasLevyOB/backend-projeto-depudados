@@ -15,4 +15,8 @@ export class ProposicaoService {
     async findByIdsWithPagination(ids: number[], page: number, limit: number): Promise<IProposicao[]> {
         return await this.repositorio.findByIdsWithPagination(ids, page, limit);
     }
+
+    async countByIdsAndTipo(ids: number[], codTipo: number): Promise<number> {
+        return await this.repositorio.countByIdsAndTipo(ids, codTipo);
+    }
 }

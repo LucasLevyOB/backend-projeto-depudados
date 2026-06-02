@@ -12,7 +12,7 @@ export class DespesaService {
         return await this.repositorio.findAll();
     }
 
-    async getTotalGastosByDeputado(idDeputado: number): Promise<number> {
-        return await this.repositorio.getTotalGastosByDeputado(idDeputado);
+    async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {
+        return await this.repositorio.getGastosDespesasByDeputado(idDeputado);
     }
 }

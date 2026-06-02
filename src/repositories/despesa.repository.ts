@@ -5,7 +5,7 @@ export class DespesaRepository {
         return await Despesa.find();
     }
 
-    async getTotalGastosByDeputado(idDeputado: number): Promise<number> {
+    async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {
         const despesas = await Despesa.find({ idDeputado: idDeputado }).select('valorLiquido').lean();
         return despesas.reduce((total, d) => {
             if (!d.valorLiquido) return total;

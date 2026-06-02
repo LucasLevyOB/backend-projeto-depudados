@@ -26,13 +26,21 @@ export class DeputadoService {
         const deputados = await this.repositorio.findAll(page, limit);
 
         return Promise.all(deputados.map(async (deputado) => {
-            const totalGastos = await this.despesaService.getTotalGastosByDeputado(deputado._id);
-            const totalProjetos = await this.proposicaoAutorService.countProjetosByDeputadoId(deputado._id);
+            const gastosDespesas = await this.despesaService.getGastosDespesasByDeputado(deputado._id);
+
+            // Fazer um join entre os dois serviços para contar apenas Projetos de Lei (codTipo: 139)
+            const proposicoesAutorias = await this.proposicaoAutorService.findByDeputadoId(deputado._id);
+            const proposicaoIds = proposicoesAutorias.map(a => a.idProposicao);
+            const totalProjetos = await this.proposicaoService.countByIdsAndTipo(proposicaoIds, 139);
+            const totalProposicoes = proposicaoIds.length;
 
             return {
                 ...deputado,
-                totalGastos,
-                totalProjetos
+                gastos_despesas: gastosDespesas,
+                projetos_de_lei: totalProjetos,
+                total_proposicoes: totalProposicoes,
+                eficiencia: totalProjetos / gastosDespesas,
+                custo_por_proposicao: gastosDespesas / totalProposicoes
             };
         }));
     }

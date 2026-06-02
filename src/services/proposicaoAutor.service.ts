@@ -15,8 +15,4 @@ export class ProposicaoAutorService {
     async findByDeputadoId(idDeputadoAutor: number): Promise<IProposicaoAutor[]> {
         return await this.repositorio.findByDeputadoId(idDeputadoAutor);
     }
-
-    async countProjetosByDeputadoId(idDeputadoAutor: number): Promise<number> {
-        return await this.repositorio.countProjetosByDeputadoId(idDeputadoAutor);
-    }
 }

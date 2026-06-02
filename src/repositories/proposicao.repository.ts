@@ -12,4 +12,8 @@ export class ProposicaoRepository {
             .skip(skip)
             .limit(limit);
     }
+
+    async countByIdsAndTipo(ids: number[], codTipo: number): Promise<number> {
+        return await Proposicao.countDocuments({ _id: { $in: ids }, codTipo });
+    }
 }
