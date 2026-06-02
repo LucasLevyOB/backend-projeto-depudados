@@ -12,6 +12,7 @@ export interface IDeputado {
     urlWebsite: string[];
     dataNascimento: string;
     dataFalecimento: string;
+    urlFoto: string;
     ufNascimento: string;
     municipioNascimento: string;
 }
@@ -28,6 +29,7 @@ const DeputadoSchema: Schema = new Schema({
     urlWebsite: [{ type: String }],
     dataNascimento: { type: String },
     dataFalecimento: { type: String },
+    urlFoto: { type: String },
     ufNascimento: { type: String },
     municipioNascimento: { type: String }
 });
