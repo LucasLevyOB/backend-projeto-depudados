@@ -5,8 +5,8 @@ export class DeputadoRepository {
         const skip = (page - 1) * limit;
         return await Deputado
             .find()
-            .select({ nome: 1, ufNascimento: 1, urlFoto: 1, _id: 1, estatisticas: 1 })
-            .where({ idLegislaturaFinal: 57 })
+            .select({ nome: 1, urlFoto: 1, _id: 1, estatisticas: 1, siglaPartido: '$ultimoStatus.siglaPartido', siglaUf: '$ultimoStatus.siglaUf', })
+            .where({ 'ultimoStatus.situacao': 'Exercício', 'ultimoStatus.idLegislatura': 57 })
             .sort({ 'estatisticas.scoreEficiencia': -1 })
             .skip(skip)
             .limit(limit)

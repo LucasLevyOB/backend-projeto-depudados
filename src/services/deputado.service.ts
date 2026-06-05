@@ -39,7 +39,8 @@ export class DeputadoService {
     private calcularScore(totalProjetos: number, totalProposicoes: number, totalGastos: number): number {
         const outrasProposicoes = totalProposicoes - totalProjetos;
         const producaoPonderada = (totalProjetos * this.PESO_PL) + (outrasProposicoes * this.PESO_PROPOSICAO);
-        const gastosValidos = totalGastos > 0 ? totalGastos : 1;
+        const salarios = 41 * 46000;
+        const gastosValidos = totalGastos > 0 ? totalGastos + salarios : salarios;
 
         return Math.round((producaoPonderada / gastosValidos) * this.FATOR_ESCALA);
     }

@@ -23,6 +23,26 @@ export interface IDeputado {
         custoPorProjetoLei: number | null;
         custoPorProposicao: number | null;
     };
+    cpf?: string;
+    escolaridade?: string;
+    ultimoStatus?: {
+        situacao: string;
+        condicaoEleitoral: string;
+        siglaPartido: string;
+        siglaUf: string;
+        idLegislatura: number;
+        nomeEleitoral: string;
+        data: string;
+        descricaoStatus: string | null;
+        gabinete?: {
+            nome: string | null;
+            predio: string | null;
+            sala: string | null;
+            andar: string | null;
+            telefone: string | null;
+            email: string | null;
+        };
+    };
 }
 
 const DeputadoSchema: Schema = new Schema({
@@ -47,6 +67,26 @@ const DeputadoSchema: Schema = new Schema({
         scoreEficiencia: { type: Number, default: 0, index: -1 },
         custoPorProjetoLei: { type: Number, default: null },
         custoPorProposicao: { type: Number, default: null }
+    },
+    cpf: { type: String },
+    escolaridade: { type: String },
+    ultimoStatus: {
+        situacao: { type: String },
+        condicaoEleitoral: { type: String },
+        siglaPartido: { type: String },
+        siglaUf: { type: String },
+        idLegislatura: { type: Number },
+        nomeEleitoral: { type: String },
+        data: { type: String },
+        descricaoStatus: { type: String },
+        gabinete: {
+            nome: { type: String },
+            predio: { type: String },
+            sala: { type: String },
+            andar: { type: String },
+            telefone: { type: String },
+            email: { type: String }
+        }
     }
 });
 
