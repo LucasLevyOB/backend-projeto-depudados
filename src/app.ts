@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from '@/config/database';
+import cors from 'cors';
 import deputadoRoute from "@/routes/deputado.route";
 import despesaRoute from "@/routes/despesa.route";
 import proposicaoRoute from "@/routes/proposicao.route";
@@ -11,7 +12,12 @@ connectDB();
 
 const app = express();
 const PORT = process.env.PORT;
+const corsOptions = {
+    origin: 'http://localhost:5173',
+    optionsSuccessStatus: 200
+};
 
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get('/', (req, res) => {
