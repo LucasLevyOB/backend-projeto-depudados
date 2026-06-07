@@ -1,7 +1,5 @@
 import { Request, Response } from "express";
 import { DeputadoService } from "@/services/deputado.service";
-import { Despesa } from "@/models/despesa.model";
-import { ProposicaoAutor } from "@/models/proposicaoAutor.model";
 
 export class DeputadoController {
     private readonly deputadoService: DeputadoService;
@@ -30,6 +28,23 @@ export class DeputadoController {
             }
 
             const proposicoes = await this.deputadoService.findProposicoes(id, page, limit);
+            res.json(proposicoes);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Erro interno do servidor" });
+        }
+    }
+
+    async findById(req: Request, res: Response): Promise<void> {
+        try {
+            const id = Number(req.params.id);
+
+            if (isNaN(id)) {
+                res.status(400).json({ error: "ID do deputado inválido" });
+                return;
+            }
+
+            const proposicoes = await this.deputadoService.findById(id);
             res.json(proposicoes);
         } catch (error) {
             console.error(error);

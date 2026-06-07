@@ -15,4 +15,8 @@ export class DespesaService {
     async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {
         return await this.repositorio.getGastosDespesasByDeputado(idDeputado);
     }
+
+    async getResumoGastosByDeputado(idDeputado: number): Promise<any[]> {
+        return await this.repositorio.getResumoGastosByDeputado(idDeputado);
+    }
 }

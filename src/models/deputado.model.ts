@@ -1,5 +1,33 @@
 import { Schema, model } from 'mongoose';
 
+export interface IStatus {
+    situacao: string;
+    condicaoEleitoral: string;
+    siglaPartido: string;
+    siglaUf: string;
+    idLegislatura: number;
+    nomeEleitoral: string;
+    data: string;
+    descricaoStatus: string | null;
+    gabinete?: {
+        nome: string | null;
+        predio: string | null;
+        sala: string | null;
+        andar: string | null;
+        telefone: string | null;
+        email: string | null;
+    };
+}
+
+export interface IResumoGastos {
+    ano: number;
+    totalGastos: number;
+    meses: Array<{
+        mes: number;
+        totalGasto: number;
+    }>;
+}
+
 export interface IDeputado {
     _id: number;
     uri: string;
@@ -25,24 +53,8 @@ export interface IDeputado {
     };
     cpf?: string;
     escolaridade?: string;
-    ultimoStatus?: {
-        situacao: string;
-        condicaoEleitoral: string;
-        siglaPartido: string;
-        siglaUf: string;
-        idLegislatura: number;
-        nomeEleitoral: string;
-        data: string;
-        descricaoStatus: string | null;
-        gabinete?: {
-            nome: string | null;
-            predio: string | null;
-            sala: string | null;
-            andar: string | null;
-            telefone: string | null;
-            email: string | null;
-        };
-    };
+    ultimoStatus?: IStatus;
+    resumoGastos?: IResumoGastos[];
 }
 
 const DeputadoSchema: Schema = new Schema({
@@ -87,7 +99,15 @@ const DeputadoSchema: Schema = new Schema({
             telefone: { type: String },
             email: { type: String }
         }
-    }
+    },
+    resumoGastos: [{
+        ano: { type: Number },
+        totalGastos: { type: Number },
+        meses: [{
+            mes: { type: Number },
+            totalGasto: { type: Number }
+        }]
+    }]
 });
 
 export const Deputado = model<IDeputado>('Deputado', DeputadoSchema);

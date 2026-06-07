@@ -22,7 +22,7 @@ export class DeputadoService {
         this.despesaService = despesaService;
     }
 
-    private readonly PESO_PL = 10;
+    private readonly PESO_PL = 20;
     private readonly PESO_PROPOSICAO = 1;
     /**
      * Fator de escala para o cálculo do score de eficiência (100 mil reais)
@@ -59,6 +59,10 @@ export class DeputadoService {
         return await this.repositorio.findAll(page, limit);
     }
 
+    async findById(id: number): Promise<any> {
+        return await this.repositorio.findById(id);
+    }
+
     async syncAllEstatisticas(): Promise<void> {
         const deputados = await this.repositorio.findAllSync();
 
@@ -75,6 +79,8 @@ export class DeputadoService {
             const custoPorPL = this.calcularCustoPor(totalProjetos, gastosDespesas);
             const custoPorProposicaoGeral = this.calcularCustoPor(totalProposicoes, gastosDespesas);
 
+            const resumoGastos = await this.despesaService.getResumoGastosByDeputado(deputado._id);
+
             await this.repositorio.updateEstatisticas(deputado._id, {
                 gastosDespesas: gastosDespesas,
                 projetosDeLei: totalProjetos,
@@ -82,7 +88,7 @@ export class DeputadoService {
                 scoreEficiencia: scoreEficiencia,
                 custoPorProjetoLei: custoPorPL,
                 custoPorProposicao: custoPorProposicaoGeral
-            });
+            }, resumoGastos);
         }
     }
 

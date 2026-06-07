@@ -17,7 +17,31 @@ export class DeputadoRepository {
         return await Deputado.find({ idLegislaturaFinal: 57 }).lean();
     }
 
-    async updateEstatisticas(id: number, estatisticas: any): Promise<void> {
-        await Deputado.updateOne({ _id: id }, { $set: { estatisticas } });
+    async updateEstatisticas(id: number, estatisticas: any, resumoGastos?: any): Promise<void> {
+        const updateDoc: any = { $set: { estatisticas } };
+        if (resumoGastos) {
+            updateDoc.$set.resumoGastos = resumoGastos;
+        }
+        await Deputado.updateOne({ _id: id }, updateDoc);
+    }
+
+    async findById(id: number): Promise<IDeputado[]> {
+        return await Deputado
+            .find({ _id: id })
+            .select({
+                _id: 1,
+                nome: 1,
+                urlFoto: 1,
+                siglaPartido: '$ultimoStatus.siglaPartido',
+                siglaUf: '$ultimoStatus.siglaUf',
+                estatisticas: 1,
+                resumoGastos: 1,
+                escolaridade: 1,
+                situacao: '$ultimoStatus.situacao',
+                condicaoEleitoral: '$ultimoStatus.condicaoEleitoral',
+                nomeEleitoral: '$ultimoStatus.nomeEleitoral',
+                descricaoStatus: '$ultimoStatus.descricaoStatus',
+                gabinete: '$ultimoStatus.gabinete',
+            })
     }
 }
