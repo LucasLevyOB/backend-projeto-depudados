@@ -1,8 +1,8 @@
 import { DeputadoRepository } from "@/repositories/deputado.repository";
-import { IDeputado } from "@/models/deputado.model";
 import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoService } from "@/services/proposicao.service";
 import { DespesaService } from "@/services/despesa.service";
+import { calcularScoreEficiencia, calcularCustoPorProducao } from "@/utils/estatisticas.util";
 
 export class DeputadoService {
     private readonly repositorio: DeputadoRepository;
@@ -20,39 +20,6 @@ export class DeputadoService {
         this.proposicaoAutorService = proposicaoAutorService;
         this.proposicaoService = proposicaoService;
         this.despesaService = despesaService;
-    }
-
-    private readonly PESO_PL = 20;
-    private readonly PESO_PROPOSICAO = 1;
-    /**
-     * Fator de escala para o cálculo do score de eficiência (100 mil reais)
-     */
-    private readonly FATOR_ESCALA = 100000;
-
-    /**
-     * Calcula o score de eficiência do deputado
-     * @param totalProjetos Total de projetos de lei do deputado
-     * @param totalProposicoes Total de proposições do deputado
-     * @param totalGastos Total de gastos do deputado
-     * @returns Score de eficiência do deputado
-     */
-    private calcularScore(totalProjetos: number, totalProposicoes: number, totalGastos: number): number {
-        const outrasProposicoes = totalProposicoes - totalProjetos;
-        const producaoPonderada = (totalProjetos * this.PESO_PL) + (outrasProposicoes * this.PESO_PROPOSICAO);
-        const salarios = 41 * 46000;
-        const gastosValidos = totalGastos > 0 ? totalGastos + salarios : salarios;
-
-        return Math.round((producaoPonderada / gastosValidos) * this.FATOR_ESCALA);
-    }
-
-    /**
-     * Calcula o custo por produção
-     * @param total Total de produção
-     * @param gastos Total de gastos
-     * @returns Custo por produção
-     */
-    private calcularCustoPor(total: number, gastos: number) {
-        return total > 0 ? (gastos / total) : null;
     }
 
     async findAll(page: number = 1, limit: number = 20): Promise<any[]> {
@@ -74,10 +41,10 @@ export class DeputadoService {
             const totalProjetos = await this.proposicaoService.countByIdsAndTipo(proposicaoIds, 139);
             const totalProposicoes = proposicaoIds.length;
 
-            const scoreEficiencia = this.calcularScore(totalProjetos, totalProposicoes, gastosDespesas);
+            const scoreEficiencia = calcularScoreEficiencia(totalProjetos, totalProposicoes, gastosDespesas);
 
-            const custoPorPL = this.calcularCustoPor(totalProjetos, gastosDespesas);
-            const custoPorProposicaoGeral = this.calcularCustoPor(totalProposicoes, gastosDespesas);
+            const custoPorPL = calcularCustoPorProducao(totalProjetos, gastosDespesas);
+            const custoPorProposicaoGeral = calcularCustoPorProducao(totalProposicoes, gastosDespesas);
 
             const resumoGastos = await this.despesaService.getResumoGastosByDeputado(deputado._id);
 

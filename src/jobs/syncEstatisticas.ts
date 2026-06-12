@@ -1,5 +1,3 @@
-import mongoose from "mongoose";
-import * as dotenv from "dotenv";
 import { DeputadoRepository } from "@/repositories/deputado.repository";
 import { ProposicaoAutorRepository } from "@/repositories/proposicaoAutor.repository";
 import { ProposicaoRepository } from "@/repositories/proposicao.repository";
@@ -8,12 +6,11 @@ import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoService } from "@/services/proposicao.service";
 import { DespesaService } from "@/services/despesa.service";
 import { DeputadoService } from "@/services/deputado.service";
-
-dotenv.config();
+import connectDB from "@/config/database";
 
 async function run() {
     console.log("Conectando ao MongoDB...");
-    await mongoose.connect(process.env.DATABASE_URL || "");
+    await connectDB();
     console.log("Conectado com sucesso.");
 
     const deputadoRepository = new DeputadoRepository();

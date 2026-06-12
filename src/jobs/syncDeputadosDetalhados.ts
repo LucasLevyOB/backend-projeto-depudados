@@ -1,19 +1,16 @@
-import mongoose from "mongoose";
-import * as dotenv from "dotenv";
 import fs from "fs/promises";
 import path from "path";
 import { Deputado } from "@/models/deputado.model";
-
-dotenv.config();
+import connectDB from "@/config/database";
 
 async function run() {
     console.log("Conectando ao MongoDB...");
-    await mongoose.connect(process.env.DATABASE_URL || "");
+    await connectDB();
     console.log("Conectado com sucesso.");
 
     console.log("Lendo o arquivo JSON...");
     const jsonPath = path.resolve(__dirname, "../../../web-scraping/projeto-depudados.deputados-detalhados.json");
-    
+
     let fileContent;
     try {
         fileContent = await fs.readFile(jsonPath, "utf8");
