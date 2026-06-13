@@ -28,6 +28,19 @@ export interface IResumoGastos {
     }>;
 }
 
+export interface IResumoProposicoes {
+    ano: number;
+    meses: Array<{
+        mes: number;
+        projetosDeLei: number;
+        outrasProposicoes: number;
+    }>;
+    tipos: Array<{
+        siglaTipo: string;
+        quantidade: number;
+    }>;
+}
+
 export interface IDeputado {
     _id: number;
     uri: string;
@@ -55,6 +68,7 @@ export interface IDeputado {
     escolaridade?: string;
     ultimoStatus?: IStatus;
     resumoGastos?: IResumoGastos[];
+    resumoProposicoes?: IResumoProposicoes[];
 }
 
 const DeputadoSchema: Schema = new Schema({
@@ -106,6 +120,19 @@ const DeputadoSchema: Schema = new Schema({
         meses: [{
             mes: { type: Number },
             totalGasto: { type: Number }
+        }]
+    }],
+    resumoProposicoes: [{
+        ano: { type: Number },
+        meses: [{
+            mes: { type: Number },
+            projetosDeLei: { type: Number, default: 0 },
+            outrasProposicoes: { type: Number, default: 0 }
+        }],
+        tipos: [{
+            siglaTipo: { type: String },
+            descricaoTipo: { type: String },
+            quantidade: { type: Number, default: 0 }
         }]
     }]
 });

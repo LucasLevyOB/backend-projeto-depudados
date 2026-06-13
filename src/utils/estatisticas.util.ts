@@ -31,3 +31,44 @@ export const calcularScoreEficiencia = (
 export const calcularCustoPorProducao = (total: number, gastos: number): number | null => {
     return total > 0 ? (gastos / total) : null;
 };
+
+/**
+ * Agrupa as proposições por ano, mês e tipo.
+ * @param proposicoes Lista de proposições
+ * @returns Resumo agrupado
+ */
+export const agruparResumoProposicoes = (proposicoes: any[]) => {
+    const resumoMap = new Map<number, any>();
+
+    for (const prop of proposicoes) {
+        if (!prop.dataApresentacao) continue;
+        const date = new Date(prop.dataApresentacao);
+        const ano = date.getFullYear();
+        const mes = date.getMonth() + 1;
+
+        if (!resumoMap.has(ano)) {
+            const mesesInit = Array.from({ length: 12 }, (_, i) => ({ mes: i + 1, projetosDeLei: 0, outrasProposicoes: 0 }));
+            resumoMap.set(ano, { ano, meses: mesesInit, tipos: [] });
+        }
+
+        const resumoAno = resumoMap.get(ano);
+        const resumoMes = resumoAno.meses.find((m: any) => m.mes === mes);
+
+        if (prop.codTipo === 139) {
+            resumoMes.projetosDeLei++;
+        } else {
+            resumoMes.outrasProposicoes++;
+        }
+
+        const siglaTipo = prop.siglaTipo || "Outros";
+        const descricaoTipo = prop.descricaoTipo || "Outros";
+        const tipoExistente = resumoAno.tipos.find((t: any) => t.siglaTipo === siglaTipo);
+        if (tipoExistente) {
+            tipoExistente.quantidade++;
+        } else {
+            resumoAno.tipos.push({ siglaTipo, descricaoTipo, quantidade: 1 });
+        }
+    }
+
+    return Array.from(resumoMap.values());
+};

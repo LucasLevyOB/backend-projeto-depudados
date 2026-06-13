@@ -13,7 +13,14 @@ export class ProposicaoRepository {
             .limit(limit);
     }
 
-    async countByIdsAndTipo(ids: number[], codTipo: number): Promise<number> {
+    async findByIds(ids: number[]): Promise<IProposicao[]> {
+        return await Proposicao.find({ _id: { $in: ids } }).lean();
+    }
+
+    async countByIdsAndTipo(ids: number[], codTipo: number, periodo?: number[]): Promise<number> {
+        if (periodo) {
+            return await Proposicao.countDocuments({ _id: { $in: ids }, codTipo, ano: { $in: periodo } });
+        }
         return await Proposicao.countDocuments({ _id: { $in: ids }, codTipo });
     }
 }

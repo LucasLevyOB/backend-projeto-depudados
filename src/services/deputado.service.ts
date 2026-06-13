@@ -2,7 +2,7 @@ import { DeputadoRepository } from "@/repositories/deputado.repository";
 import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoService } from "@/services/proposicao.service";
 import { DespesaService } from "@/services/despesa.service";
-import { calcularScoreEficiencia, calcularCustoPorProducao } from "@/utils/estatisticas.util";
+import { calcularScoreEficiencia, calcularCustoPorProducao, agruparResumoProposicoes } from "@/utils/estatisticas.util";
 
 export class DeputadoService {
     private readonly repositorio: DeputadoRepository;
@@ -48,6 +48,9 @@ export class DeputadoService {
 
             const resumoGastos = await this.despesaService.getResumoGastosByDeputado(deputado._id);
 
+            const proposicoes = await this.proposicaoService.findByIds(proposicaoIds);
+            const resumoProposicoes = agruparResumoProposicoes(proposicoes);
+
             await this.repositorio.updateEstatisticas(deputado._id, {
                 gastosDespesas: gastosDespesas,
                 projetosDeLei: totalProjetos,
@@ -55,7 +58,7 @@ export class DeputadoService {
                 scoreEficiencia: scoreEficiencia,
                 custoPorProjetoLei: custoPorPL,
                 custoPorProposicao: custoPorProposicaoGeral
-            }, resumoGastos);
+            }, resumoGastos, resumoProposicoes);
         }
     }
 

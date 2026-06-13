@@ -17,10 +17,13 @@ export class DeputadoRepository {
         return await Deputado.find({ idLegislaturaFinal: 57 }).lean();
     }
 
-    async updateEstatisticas(id: number, estatisticas: any, resumoGastos?: any): Promise<void> {
+    async updateEstatisticas(id: number, estatisticas: any, resumoGastos?: any, resumoProposicoes?: any): Promise<void> {
         const updateDoc: any = { $set: { estatisticas } };
         if (resumoGastos) {
             updateDoc.$set.resumoGastos = resumoGastos;
+        }
+        if (resumoProposicoes) {
+            updateDoc.$set.resumoProposicoes = resumoProposicoes;
         }
         await Deputado.updateOne({ _id: id }, updateDoc);
     }
@@ -36,6 +39,7 @@ export class DeputadoRepository {
                 siglaUf: '$ultimoStatus.siglaUf',
                 estatisticas: 1,
                 resumoGastos: 1,
+                resumoProposicoes: 1,
                 escolaridade: 1,
                 situacao: '$ultimoStatus.situacao',
                 condicaoEleitoral: '$ultimoStatus.condicaoEleitoral',
