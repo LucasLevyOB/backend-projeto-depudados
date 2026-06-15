@@ -3,6 +3,8 @@ import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoService } from "@/services/proposicao.service";
 import { DespesaService } from "@/services/despesa.service";
 import { calcularScoreEficiencia, calcularCustoPorProducao, agruparResumoProposicoes } from "@/utils/estatisticas.util";
+import { IPagedResponse } from "@/types";
+import { IDeputado } from "@/models/deputado.model";
 
 export class DeputadoService {
     private readonly repositorio: DeputadoRepository;
@@ -22,7 +24,7 @@ export class DeputadoService {
         this.despesaService = despesaService;
     }
 
-    async findAll(page: number = 1, limit: number = 20): Promise<any[]> {
+    async findAll(page: number = 1, limit: number = 20): Promise<IPagedResponse<IDeputado>> {
         return await this.repositorio.findAll(page, limit);
     }
 

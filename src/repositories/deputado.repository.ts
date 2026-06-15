@@ -1,9 +1,24 @@
 import { Deputado, IDeputado } from "@/models/deputado.model";
+import { IPagedResponse } from "@/types";
 
 export class DeputadoRepository {
-    async findAll(page: number = 1, limit: number = 20): Promise<IDeputado[]> {
+    async findAll(page: number = 1, limit: number = 20): Promise<IPagedResponse<IDeputado>> {
         const skip = (page - 1) * limit;
-        return await Deputado
+        const response: IPagedResponse<IDeputado> = {
+            total: 0,
+            totalPages: 0,
+            page: 0,
+            limit: 0,
+            data: [],
+        }
+
+        const total = await Deputado.countDocuments({ 'ultimoStatus.situacao': 'Exercício', 'ultimoStatus.idLegislatura': 57 })
+        response.total = total
+        response.page = page
+        response.limit = limit
+        response.totalPages = Math.ceil(total / limit)
+
+        response.data = await Deputado
             .find()
             .select({ nome: 1, urlFoto: 1, _id: 1, estatisticas: 1, siglaPartido: '$ultimoStatus.siglaPartido', siglaUf: '$ultimoStatus.siglaUf', })
             .where({ 'ultimoStatus.situacao': 'Exercício', 'ultimoStatus.idLegislatura': 57 })
@@ -11,6 +26,8 @@ export class DeputadoRepository {
             .skip(skip)
             .limit(limit)
             .lean();
+
+        return response;
     }
 
     async findAllSync(): Promise<IDeputado[]> {
