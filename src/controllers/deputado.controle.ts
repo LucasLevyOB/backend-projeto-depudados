@@ -11,8 +11,10 @@ export class DeputadoController {
     async findAll(req: Request, res: Response): Promise<void> {
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 20;
+        const uf = req.query.uf as string;
+        const siglaPartido = req.query.siglaPartido as string;
 
-        const deputados = await this.deputadoService.findAll(page, limit);
+        const deputados = await this.deputadoService.findAll(page, limit, uf, siglaPartido);
         res.json(deputados);
     }
 

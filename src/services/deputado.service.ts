@@ -24,8 +24,8 @@ export class DeputadoService {
         this.despesaService = despesaService;
     }
 
-    async findAll(page: number = 1, limit: number = 20): Promise<IPagedResponse<IDeputado>> {
-        return await this.repositorio.findAll(page, limit);
+    async findAll(page: number = 1, limit: number = 20, uf?: string, siglaPartido?: string): Promise<IPagedResponse<IDeputado>> {
+        return await this.repositorio.findAll(page, limit, uf, siglaPartido);
     }
 
     async findById(id: number): Promise<any> {

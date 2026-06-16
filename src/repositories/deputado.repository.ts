@@ -2,7 +2,18 @@ import { Deputado, IDeputado } from "@/models/deputado.model";
 import { IPagedResponse } from "@/types";
 
 export class DeputadoRepository {
-    async findAll(page: number = 1, limit: number = 20): Promise<IPagedResponse<IDeputado>> {
+    private formatQuery(uf?: string, siglaPartido?: string): any {
+        const query: any = { 'ultimoStatus.situacao': 'Exercício', 'ultimoStatus.idLegislatura': 57 };
+        if (uf) {
+            query['ultimoStatus.siglaUf'] = uf;
+        }
+        if (siglaPartido) {
+            query['ultimoStatus.siglaPartido'] = siglaPartido;
+        }
+        return query;
+    }
+
+    async findAll(page: number = 1, limit: number = 20, uf?: string, siglaPartido?: string): Promise<IPagedResponse<IDeputado>> {
         const skip = (page - 1) * limit;
         const response: IPagedResponse<IDeputado> = {
             total: 0,
@@ -12,7 +23,9 @@ export class DeputadoRepository {
             data: [],
         }
 
-        const total = await Deputado.countDocuments({ 'ultimoStatus.situacao': 'Exercício', 'ultimoStatus.idLegislatura': 57 })
+        const query = this.formatQuery(uf, siglaPartido);
+
+        const total = await Deputado.countDocuments(query)
         response.total = total
         response.page = page
         response.limit = limit
@@ -20,8 +33,8 @@ export class DeputadoRepository {
 
         response.data = await Deputado
             .find()
-            .select({ nome: 1, urlFoto: 1, _id: 1, estatisticas: 1, siglaPartido: '$ultimoStatus.siglaPartido', siglaUf: '$ultimoStatus.siglaUf', })
-            .where({ 'ultimoStatus.situacao': 'Exercício', 'ultimoStatus.idLegislatura': 57 })
+            .select({ nome: 1, urlFoto: 1, _id: 1, estatisticas: 1, siglaPartido: '$ultimoStatus.siglaPartido', siglaUf: '$ultimoStatus.siglaUf' })
+            .where(query)
             .sort({ 'estatisticas.scoreEficiencia': -1 })
             .skip(skip)
             .limit(limit)
