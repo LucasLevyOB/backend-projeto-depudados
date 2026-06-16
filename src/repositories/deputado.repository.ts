@@ -1,8 +1,9 @@
 import { Deputado, IDeputado } from "@/models/deputado.model";
 import { IPagedResponse } from "@/types";
+import { regexFlexivel } from "@/utils";
 
 export class DeputadoRepository {
-    private formatQuery(uf?: string, siglaPartido?: string): any {
+    private formatQuery(uf?: string, siglaPartido?: string, nome?: string): any {
         const query: any = { 'ultimoStatus.situacao': 'Exercício', 'ultimoStatus.idLegislatura': 57 };
         if (uf) {
             query['ultimoStatus.siglaUf'] = uf;
@@ -10,10 +11,14 @@ export class DeputadoRepository {
         if (siglaPartido) {
             query['ultimoStatus.siglaPartido'] = siglaPartido;
         }
+        if (nome) {
+            console.log(regexFlexivel(nome))
+            query['nome'] = { $regex: regexFlexivel(nome), $options: 'i' };
+        }
         return query;
     }
 
-    async findAll(page: number = 1, limit: number = 20, uf?: string, siglaPartido?: string): Promise<IPagedResponse<IDeputado>> {
+    async findAll(page: number = 1, limit: number = 20, uf?: string, siglaPartido?: string, nome?: string): Promise<IPagedResponse<IDeputado>> {
         const skip = (page - 1) * limit;
         const response: IPagedResponse<IDeputado> = {
             total: 0,
@@ -23,7 +28,7 @@ export class DeputadoRepository {
             data: [],
         }
 
-        const query = this.formatQuery(uf, siglaPartido);
+        const query = this.formatQuery(uf, siglaPartido, nome);
 
         const total = await Deputado.countDocuments(query)
         response.total = total

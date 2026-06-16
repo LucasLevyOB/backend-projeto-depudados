@@ -135,6 +135,8 @@ const DeputadoSchema: Schema = new Schema({
             quantidade: { type: Number, default: 0 }
         }]
     }]
+}, {
+    collation: { locale: "pt", strength: 1 }
 });
 
 export const Deputado = model<IDeputado>('Deputado', DeputadoSchema);

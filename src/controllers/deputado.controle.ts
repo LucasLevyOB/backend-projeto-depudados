@@ -13,8 +13,9 @@ export class DeputadoController {
         const limit = Number(req.query.limit) || 20;
         const uf = req.query.uf as string;
         const siglaPartido = req.query.siglaPartido as string;
+        const nome = req.query.nome as string;
 
-        const deputados = await this.deputadoService.findAll(page, limit, uf, siglaPartido);
+        const deputados = await this.deputadoService.findAll(page, limit, uf, siglaPartido, nome);
         res.json(deputados);
     }
 
