@@ -26,6 +26,10 @@ export interface IResumoGastos {
         mes: number;
         totalGasto: number;
     }>;
+    categorias: Array<{
+        descricao: string;
+        totalGasto: number;
+    }>;
 }
 
 export interface IResumoProposicoes {
@@ -119,6 +123,10 @@ const DeputadoSchema: Schema = new Schema({
         totalGastos: { type: Number },
         meses: [{
             mes: { type: Number },
+            totalGasto: { type: Number }
+        }],
+        categorias: [{
+            descricao: { type: String },
             totalGasto: { type: Number }
         }]
     }],

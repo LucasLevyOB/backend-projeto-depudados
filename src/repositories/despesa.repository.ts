@@ -37,9 +37,9 @@ export class DespesaRepository {
     }
 
     async getResumoGastosByDeputado(idDeputado: number): Promise<any[]> {
-        const despesas = await Despesa.find({ idDeputado: idDeputado }).select('ano mes valorLiquido').lean();
+        const despesas = await Despesa.find({ idDeputado: idDeputado }).select('ano mes valorLiquido descricao').lean();
 
-        const mapaAnos = new Map<number, { ano: number; totalGastos: number; mesesMap: Map<number, number> }>();
+        const mapaAnos = new Map<number, { ano: number; totalGastos: number; mesesMap: Map<number, number>; categoriasMap: Map<string, number> }>();
 
         for (const d of despesas) {
             if (!d.valorLiquido || !d.ano || !d.mes) continue;
@@ -47,7 +47,7 @@ export class DespesaRepository {
             const valorNumerico = isNaN(valor) ? 0 : valor;
 
             if (!mapaAnos.has(d.ano)) {
-                mapaAnos.set(d.ano, { ano: d.ano, totalGastos: 0, mesesMap: new Map<number, number>() });
+                mapaAnos.set(d.ano, { ano: d.ano, totalGastos: 0, mesesMap: new Map<number, number>(), categoriasMap: new Map<string, number>() });
             }
 
             const anoData = mapaAnos.get(d.ano)!;
@@ -55,6 +55,10 @@ export class DespesaRepository {
 
             const mesAtual = anoData.mesesMap.get(d.mes) || 0;
             anoData.mesesMap.set(d.mes, mesAtual + valorNumerico);
+
+            const desc = d.descricao || 'Sem categoria';
+            const catAtual = anoData.categoriasMap.get(desc) || 0;
+            anoData.categoriasMap.set(desc, catAtual + valorNumerico);
         }
 
         return Array.from(mapaAnos.values()).map(anoData => {
@@ -63,10 +67,16 @@ export class DespesaRepository {
                 totalGasto: Number(totalGasto.toFixed(2))
             })).sort((a, b) => a.mes - b.mes);
 
+            const categoriasArray = Array.from(anoData.categoriasMap.entries()).map(([descricao, totalGasto]) => ({
+                descricao,
+                totalGasto: Number(totalGasto.toFixed(2))
+            })).sort((a, b) => b.totalGasto - a.totalGasto);
+
             return {
                 ano: anoData.ano,
                 totalGastos: Number(anoData.totalGastos.toFixed(2)),
-                meses: mesesArray
+                meses: mesesArray,
+                categorias: categoriasArray
             };
         }).sort((a, b) => b.ano - a.ano);
     }
