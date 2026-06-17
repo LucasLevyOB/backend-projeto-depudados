@@ -17,7 +17,8 @@ export class DespesaController {
     const idDeputado = Number(req.params.idDeputado);
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
-    const ano = Number(req.query.ano);
+    const ano = Number(req.query.ano) || undefined;
+    const descricao = req.query.descricao as string || undefined;
 
     if (isNaN(idDeputado)) {
       res.status(400).json({ error: "Invalid idDeputado" });
@@ -29,6 +30,7 @@ export class DespesaController {
       page,
       limit,
       ano,
+      descricao
     );
     res.json(response);
   }

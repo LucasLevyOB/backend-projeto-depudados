@@ -18,8 +18,9 @@ export class DespesaService {
     page: number = 1,
     limit: number = 20,
     ano?: number,
+    descricao?: string
   ): Promise<IPagedResponse<IDespesa>> {
-    return await this.repositorio.findByDeputado(idDeputado, page, limit, ano);
+    return await this.repositorio.findByDeputado(idDeputado, page, limit, ano, descricao);
   }
 
   async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {

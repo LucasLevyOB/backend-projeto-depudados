@@ -11,12 +11,19 @@ export class DespesaRepository {
     page: number = 1,
     limit: number = 20,
     ano?: number,
+    descricao?: string
   ): Promise<IPagedResponse<IDespesa>> {
     const skip = (page - 1) * limit;
     let query: any = { idDeputado };
+
     if (ano) {
       query.ano = ano;
     }
+
+    if (descricao) {
+      query.descricao = { $regex: descricao, $options: "i" };
+    }
+
     const total = await Despesa.countDocuments(query);
 
     const data = await Despesa.find(query)
@@ -26,6 +33,7 @@ export class DespesaRepository {
         fornecedor: 1,
         dataEmissao: 1,
         descricaoEspecificacao: 1,
+        urlDocumento: 1,
         _id: 0,
       })
       .sort({ dataEmissao: -1 })
