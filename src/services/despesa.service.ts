@@ -3,25 +3,30 @@ import { IDespesa } from "@/models/despesa.model";
 import { IPagedResponse } from "@/types";
 
 export class DespesaService {
-    private readonly repositorio: DespesaRepository;
+  private readonly repositorio: DespesaRepository;
 
-    constructor(repositorio: DespesaRepository) {
-        this.repositorio = repositorio;
-    }
+  constructor(repositorio: DespesaRepository) {
+    this.repositorio = repositorio;
+  }
 
-    async findAll(): Promise<IDespesa[]> {
-        return await this.repositorio.findAll();
-    }
+  async findAll(): Promise<IDespesa[]> {
+    return await this.repositorio.findAll();
+  }
 
-    async findByDeputado(idDeputado: number, page: number = 1, limit: number = 20): Promise<IPagedResponse<IDespesa>> {
-        return await this.repositorio.findByDeputado(idDeputado, page, limit);
-    }
+  async findByDeputado(
+    idDeputado: number,
+    page: number = 1,
+    limit: number = 20,
+    ano?: number,
+  ): Promise<IPagedResponse<IDespesa>> {
+    return await this.repositorio.findByDeputado(idDeputado, page, limit, ano);
+  }
 
-    async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {
-        return await this.repositorio.getGastosDespesasByDeputado(idDeputado);
-    }
+  async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {
+    return await this.repositorio.getGastosDespesasByDeputado(idDeputado);
+  }
 
-    async getResumoGastosByDeputado(idDeputado: number): Promise<any[]> {
-        return await this.repositorio.getResumoGastosByDeputado(idDeputado);
-    }
+  async getResumoGastosByDeputado(idDeputado: number): Promise<any[]> {
+    return await this.repositorio.getResumoGastosByDeputado(idDeputado);
+  }
 }
