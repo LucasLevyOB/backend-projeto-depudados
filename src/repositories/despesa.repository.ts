@@ -1,8 +1,30 @@
 import { Despesa, IDespesa } from "@/models/despesa.model";
+import { IPagedResponse } from "@/types";
 
 export class DespesaRepository {
     async findAll(): Promise<IDespesa[]> {
         return await Despesa.find();
+    }
+
+    async findByDeputado(idDeputado: number, page: number = 1, limit: number = 20): Promise<IPagedResponse<IDespesa>> {
+        const skip = (page - 1) * limit;
+        const total = await Despesa.countDocuments({ idDeputado });
+
+        const data = await Despesa
+            .find({ idDeputado })
+            .select({ descricao: 1, valorLiquido: 1, fornecedor: 1, dataEmissao: 1, descricaoEspecificacao: 1, _id: 0 })
+            .sort({ dataEmissao: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        return {
+            data: data,
+            total: total,
+            page: page,
+            limit: limit,
+            totalPages: Math.ceil(total / limit)
+        };
     }
 
     async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {
@@ -16,7 +38,7 @@ export class DespesaRepository {
 
     async getResumoGastosByDeputado(idDeputado: number): Promise<any[]> {
         const despesas = await Despesa.find({ idDeputado: idDeputado }).select('ano mes valorLiquido').lean();
-        
+
         const mapaAnos = new Map<number, { ano: number; totalGastos: number; mesesMap: Map<number, number> }>();
 
         for (const d of despesas) {

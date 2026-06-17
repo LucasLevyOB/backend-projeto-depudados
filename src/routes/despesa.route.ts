@@ -10,5 +10,6 @@ const despesaService = new DespesaService(despesaRepository);
 const despesaController = new DespesaController(despesaService);
 
 router.get("/", despesaController.findAll.bind(despesaController));
+router.get("/deputado/:idDeputado", despesaController.findByDeputado.bind(despesaController));
 
 export default router;

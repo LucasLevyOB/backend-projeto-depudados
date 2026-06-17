@@ -20,23 +20,11 @@ export class DeputadoRepository {
 
     async findAll(page: number = 1, limit: number = 20, uf?: string, siglaPartido?: string, nome?: string): Promise<IPagedResponse<IDeputado>> {
         const skip = (page - 1) * limit;
-        const response: IPagedResponse<IDeputado> = {
-            total: 0,
-            totalPages: 0,
-            page: 0,
-            limit: 0,
-            data: [],
-        }
-
         const query = this.formatQuery(uf, siglaPartido, nome);
 
-        const total = await Deputado.countDocuments(query)
-        response.total = total
-        response.page = page
-        response.limit = limit
-        response.totalPages = Math.ceil(total / limit)
+        const total = await Deputado.countDocuments(query);
 
-        response.data = await Deputado
+        const data = await Deputado
             .find()
             .select({ nome: 1, urlFoto: 1, _id: 1, estatisticas: 1, siglaPartido: '$ultimoStatus.siglaPartido', siglaUf: '$ultimoStatus.siglaUf' })
             .where(query)
@@ -45,7 +33,13 @@ export class DeputadoRepository {
             .limit(limit)
             .lean();
 
-        return response;
+        return {
+            data: data,
+            total: total,
+            page: page,
+            limit: limit,
+            totalPages: Math.ceil(total / limit)
+        };
     }
 
     async findAllSync(): Promise<IDeputado[]> {

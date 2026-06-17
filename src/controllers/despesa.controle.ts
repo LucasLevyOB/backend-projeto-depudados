@@ -12,4 +12,18 @@ export class DespesaController {
         const despesas = await this.despesaService.findAll();
         res.json(despesas);
     }
+
+    async findByDeputado(req: Request, res: Response): Promise<void> {
+        const idDeputado = Number(req.params.idDeputado);
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+
+        if (isNaN(idDeputado)) {
+            res.status(400).json({ error: "Invalid idDeputado" });
+            return;
+        }
+
+        const response = await this.despesaService.findByDeputado(idDeputado, page, limit);
+        res.json(response);
+    }
 }
