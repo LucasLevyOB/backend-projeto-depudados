@@ -23,4 +23,8 @@ export class ProposicaoService {
     async countByIdsAndTipo(ids: number[], codTipo: number, periodo?: number[]): Promise<number> {
         return await this.repositorio.countByIdsAndTipo(ids, codTipo, periodo);
     }
+
+    async findByDeputado(idDeputado: number, page: number = 1, limit: number = 20, siglaTipo?: string, ementa?: string, ano?: number) {
+        return await this.repositorio.findByDeputado(idDeputado, page, limit, siglaTipo, ementa, ano);
+    }
 }

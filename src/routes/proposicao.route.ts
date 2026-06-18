@@ -10,5 +10,6 @@ const proposicaoService = new ProposicaoService(proposicaoRepository);
 const proposicaoController = new ProposicaoController(proposicaoService);
 
 router.get("/", proposicaoController.findAll.bind(proposicaoController));
+router.get("/deputado/:idDeputado", proposicaoController.findByDeputado.bind(proposicaoController));
 
 export default router;
