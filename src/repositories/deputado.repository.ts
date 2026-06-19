@@ -75,6 +75,7 @@ export class DeputadoRepository {
                 nomeEleitoral: '$ultimoStatus.nomeEleitoral',
                 descricaoStatus: '$ultimoStatus.descricaoStatus',
                 gabinete: '$ultimoStatus.gabinete',
+                urlRedeSocial: 1,
             })
     }
 }
