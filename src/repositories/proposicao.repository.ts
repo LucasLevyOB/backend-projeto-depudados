@@ -3,6 +3,53 @@ import { ProposicaoAutor } from "@/models/proposicaoAutor.model";
 import { IPagedResponse } from "@/types";
 
 export class ProposicaoRepository {
+    private getQuery(siglaTipo?: string, ementa?: string, ano?: number, idsProposicoes?: number[]): any {
+        let query: any = { id: { $in: idsProposicoes } };
+
+        if (siglaTipo) {
+            query.siglaTipo = siglaTipo;
+        }
+
+        if (ementa) {
+            query.ementa = { $regex: ementa, $options: "i" };
+        }
+
+        if (ano) {
+            query.$or = [
+                { ano: ano },
+                {
+                    $expr: {
+                        $eq: [
+                            {
+                                $substrCP: [
+                                    { $toString: { $ifNull: ["$dataApresentacao", "0000"] } },
+                                    0,
+                                    4,
+                                ],
+                            },
+                            ano.toString(),
+                        ],
+                    },
+                },
+                {
+                    $expr: {
+                        $eq: [
+                            {
+                                $substrCP: [
+                                    { $toString: { $ifNull: ["$ultimoStatus.data", "0000"] } },
+                                    0,
+                                    4,
+                                ],
+                            },
+                            ano.toString(),
+                        ],
+                    },
+                },
+            ];
+        }
+        return query;
+    }
+
     async findAll(): Promise<IProposicao[]> {
         return await Proposicao.find();
     }
@@ -51,49 +98,7 @@ export class ProposicaoRepository {
             .lean();
         const idsProposicoes = autores.map((a) => a.idProposicao);
 
-        let query: any = { id: { $in: idsProposicoes } };
-
-        if (siglaTipo) {
-            query.siglaTipo = siglaTipo;
-        }
-
-        if (ementa) {
-            query.ementa = { $regex: ementa, $options: "i" };
-        }
-
-        if (ano) {
-            query.$or = [
-                { ano: ano },
-                {
-                    $expr: {
-                        $eq: [
-                            {
-                                $substrCP: [
-                                    { $toString: { $ifNull: ["$dataApresentacao", "0000"] } },
-                                    0,
-                                    4,
-                                ],
-                            },
-                            ano.toString(),
-                        ],
-                    },
-                },
-                {
-                    $expr: {
-                        $eq: [
-                            {
-                                $substrCP: [
-                                    { $toString: { $ifNull: ["$ultimoStatus.data", "0000"] } },
-                                    0,
-                                    4,
-                                ],
-                            },
-                            ano.toString(),
-                        ],
-                    },
-                },
-            ];
-        }
+        const query = this.getQuery(siglaTipo, ementa, ano, idsProposicoes);
 
         const total = await Proposicao.countDocuments(query);
         const skip = (page - 1) * limit;
@@ -106,6 +111,7 @@ export class ProposicaoRepository {
                 ementa: 1,
                 dataApresentacao: 1,
                 urlInteiroTeor: 1,
+                temas: 1,
                 _id: 0,
                 id: 1,
             })

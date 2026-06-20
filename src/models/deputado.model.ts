@@ -34,6 +34,7 @@ export interface IResumoGastos {
 
 export interface IResumoProposicoes {
     ano: number;
+    total: number;
     meses: Array<{
         mes: number;
         projetosDeLei: number;
@@ -137,6 +138,7 @@ const DeputadoSchema: Schema = new Schema({
     }],
     resumoProposicoes: [{
         ano: { type: Number },
+        total: { type: Number },
         meses: [{
             mes: { type: Number },
             projetosDeLei: { type: Number, default: 0 },

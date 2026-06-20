@@ -48,7 +48,7 @@ export const agruparResumoProposicoes = (proposicoes: any[]) => {
 
         if (!resumoMap.has(ano)) {
             const mesesInit = Array.from({ length: 12 }, (_, i) => ({ mes: i + 1, projetosDeLei: 0, outrasProposicoes: 0 }));
-            resumoMap.set(ano, { ano, meses: mesesInit, tipos: [] });
+            resumoMap.set(ano, { ano, total: 0, meses: mesesInit, tipos: [] });
         }
 
         const resumoAno = resumoMap.get(ano);
@@ -59,6 +59,8 @@ export const agruparResumoProposicoes = (proposicoes: any[]) => {
         } else {
             resumoMes.outrasProposicoes++;
         }
+
+        resumoAno.total++;
 
         const siglaTipo = prop.siglaTipo || "Outros";
         const descricaoTipo = prop.descricaoTipo || "Outros";
