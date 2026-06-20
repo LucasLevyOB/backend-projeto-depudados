@@ -49,7 +49,7 @@ const agregarTemasPorDeputado = async (deputadoService: DeputadoService, deputad
     let totalAtualizados = 0;
 
     for (const deputado of deputados) {
-        await deputadoService.syncTemasProposicoes(deputado._id);
+        await deputadoService.syncTemasProposicoes(deputado._id, [139]);
         totalAtualizados++;
 
         if (totalAtualizados % 50 === 0) {

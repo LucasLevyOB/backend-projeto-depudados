@@ -71,10 +71,14 @@ export class DeputadoService {
         return await this.proposicaoService.findByIdsWithPagination(proposicaoIds, page, limit);
     }
 
-    async syncTemasProposicoes(idDeputado: number): Promise<void> {
+    async syncTemasProposicoes(idDeputado: number, codTiposPermitidos?: number[]): Promise<void> {
         const autores = await this.proposicaoAutorService.findByDeputadoId(idDeputado);
         const proposicaoIds = autores.map(a => a.idProposicao);
-        const proposicoes = await this.proposicaoService.findByIds(proposicaoIds);
+        let proposicoes = await this.proposicaoService.findByIds(proposicaoIds);
+
+        if (codTiposPermitidos && codTiposPermitidos.length > 0) {
+            proposicoes = proposicoes.filter(p => codTiposPermitidos.includes(p.codTipo));
+        }
 
         const contagemTemas = new Map<string, number>();
 
