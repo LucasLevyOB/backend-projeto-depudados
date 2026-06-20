@@ -70,4 +70,26 @@ export class DeputadoService {
 
         return await this.proposicaoService.findByIdsWithPagination(proposicaoIds, page, limit);
     }
+
+    async syncTemasProposicoes(idDeputado: number): Promise<void> {
+        const autores = await this.proposicaoAutorService.findByDeputadoId(idDeputado);
+        const proposicaoIds = autores.map(a => a.idProposicao);
+        const proposicoes = await this.proposicaoService.findByIds(proposicaoIds);
+
+        const contagemTemas = new Map<string, number>();
+
+        for (const proposicao of proposicoes) {
+            if (!proposicao.temas || proposicao.temas.length === 0) continue;
+
+            for (const tema of proposicao.temas) {
+                contagemTemas.set(tema, (contagemTemas.get(tema) ?? 0) + 1);
+            }
+        }
+
+        const temasProposicoes = Array.from(contagemTemas.entries())
+            .map(([tema, quantidade]) => ({ tema, quantidade }))
+            .sort((a, b) => b.quantidade - a.quantidade);
+
+        await this.repositorio.updateTemasProposicoes(idDeputado, temasProposicoes);
+    }
 }

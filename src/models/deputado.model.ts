@@ -67,6 +67,7 @@ export interface IDeputado {
         scoreEficiencia: number;
         custoPorProjetoLei: number | null;
         custoPorProposicao: number | null;
+        temasProposicoes?: Array<{ tema: string; quantidade: number }>;
     };
     cpf?: string;
     escolaridade?: string;
@@ -96,7 +97,11 @@ const DeputadoSchema: Schema = new Schema({
         totalProposicoes: { type: Number, default: 0 },
         scoreEficiencia: { type: Number, default: 0, index: -1 },
         custoPorProjetoLei: { type: Number, default: null },
-        custoPorProposicao: { type: Number, default: null }
+        custoPorProposicao: { type: Number, default: null },
+        temasProposicoes: [{
+            tema: { type: String },
+            quantidade: { type: Number, default: 0 }
+        }]
     },
     cpf: { type: String },
     escolaridade: { type: String },

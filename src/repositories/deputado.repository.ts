@@ -57,6 +57,10 @@ export class DeputadoRepository {
         await Deputado.updateOne({ _id: id }, updateDoc);
     }
 
+    async updateTemasProposicoes(id: number, temasProposicoes: Array<{ tema: string; quantidade: number }>): Promise<void> {
+        await Deputado.updateOne({ _id: id }, { $set: { 'estatisticas.temasProposicoes': temasProposicoes } });
+    }
+
     async findById(id: number): Promise<IDeputado[]> {
         return await Deputado
             .find({ _id: id })

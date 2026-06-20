@@ -20,6 +20,7 @@ export interface IProposicao {
     urlInteiroTeor: string;
     ultimoStatus: object;
     idPropPrincipal: number | null;
+    temas?: string[];
 }
 
 const ProposicaoSchema: Schema = new Schema({
@@ -41,7 +42,8 @@ const ProposicaoSchema: Schema = new Schema({
     uriPropPosterior: { type: String },
     urlInteiroTeor: { type: String },
     ultimoStatus: { type: Object },
-    idPropPrincipal: { type: Number, default: null }
+    idPropPrincipal: { type: Number, default: null },
+    temas: { type: [String], default: null }
 });
 
 export const Proposicao = model<IProposicao>('Proposicao', ProposicaoSchema);
