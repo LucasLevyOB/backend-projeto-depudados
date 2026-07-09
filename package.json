@@ -9,7 +9,8 @@
     "build": "tsc",
     "sync:estatisticas": "ts-node -r tsconfig-paths/register src/jobs/syncEstatisticas.ts",
     "sync:temas": "ts-node -r tsconfig-paths/register src/jobs/syncTemas.ts",
-    "reset:temas": "ts-node -r tsconfig-paths/register src/jobs/resetTemas.ts"
+    "reset:temas": "ts-node -r tsconfig-paths/register src/jobs/resetTemas.ts",
+    "sync:proposicoes": "ts-node -r tsconfig-paths/register src/jobs/syncProposicoesBusca.ts"
   },
   "keywords": [],
   "author": "",
