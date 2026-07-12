@@ -43,14 +43,13 @@ export class DeputadoService {
             const totalProjetos = await this.proposicaoService.countByIdsAndTipo(proposicaoIds, 139);
             const totalProposicoes = proposicaoIds.length;
 
-            const scoreEficiencia = calcularScoreEficiencia(totalProjetos, totalProposicoes, gastosDespesas);
+            const proposicoes = await this.proposicaoService.findByIds(proposicaoIds);
+            const scoreEficiencia = calcularScoreEficiencia(proposicoes, gastosDespesas);
 
             const custoPorPL = calcularCustoPorProducao(totalProjetos, gastosDespesas);
             const custoPorProposicaoGeral = calcularCustoPorProducao(totalProposicoes, gastosDespesas);
 
             const resumoGastos = await this.despesaService.getResumoGastosByDeputado(deputado._id);
-
-            const proposicoes = await this.proposicaoService.findByIds(proposicaoIds);
             const resumoProposicoes = agruparResumoProposicoes(proposicoes);
 
             await this.repositorio.updateEstatisticas(deputado._id, {
@@ -61,6 +60,8 @@ export class DeputadoService {
                 custoPorProjetoLei: custoPorPL,
                 custoPorProposicao: custoPorProposicaoGeral
             }, resumoGastos, resumoProposicoes);
+
+            await this.syncTemasProposicoes(deputado._id, [139]);
         }
     }
 

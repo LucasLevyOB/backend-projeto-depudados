@@ -14,6 +14,9 @@ export interface IProposicao {
     ementaDetalhada: string;
     keywords: string;
     dataApresentacao: Date;
+    dataDaUltimaTramitacao: Date;
+    dataDaUltimaMovimentacao: Date;
+    dataOrdenacao: Date;
     uriOrgaoNumerador: string;
     uriPropAnterior: string;
     uriPropPrincipal: string;
@@ -31,6 +34,9 @@ export interface IProposicao {
     explicacaoEmenta?: string;
     comissaoPreponderante?: string;
     qtdeDeTramitacoes?: number;
+    tipoSituacaoProposicao?: string;
+    resultadoItens?: object[];
+    codProposicaoApensadaPai?: number | null;
 }
 
 const ProposicaoSchema: Schema = new Schema({
@@ -47,6 +53,9 @@ const ProposicaoSchema: Schema = new Schema({
     ementaDetalhada: { type: String },
     keywords: { type: String },
     dataApresentacao: { type: Date },
+    dataDaUltimaTramitacao: { type: Date },
+    dataDaUltimaMovimentacao: { type: Date },
+    dataOrdenacao: { type: Date },
     uriOrgaoNumerador: { type: String },
     uriPropAnterior: { type: String },
     uriPropPrincipal: { type: String },
@@ -63,7 +72,10 @@ const ProposicaoSchema: Schema = new Schema({
     linkVideo: { type: String, default: null },
     explicacaoEmenta: { type: String, default: null },
     comissaoPreponderante: { type: String, default: null },
-    qtdeDeTramitacoes: { type: Number, default: null }
+    qtdeDeTramitacoes: { type: Number, default: null },
+    tipoSituacaoProposicao: { type: String, default: null },
+    resultadoItens: { type: [Object], default: null },
+    codProposicaoApensadaPai: { type: Number, default: null }
 });
 
 export const Proposicao = model<IProposicao>('Proposicao', ProposicaoSchema);

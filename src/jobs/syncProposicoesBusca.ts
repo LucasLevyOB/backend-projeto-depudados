@@ -72,13 +72,19 @@ async function run() {
                         situacaoAtualBusca: prop.situacaoAtual || prop.situacaoProposicao || "",
                         estados: prop.estados || [],
                         dataApresentacao: prop.dataApresentacao ? new Date(prop.dataApresentacao) : undefined,
+                        dataDaUltimaTramitacao: prop.dataDaUltimaTramitacao ? new Date(prop.dataDaUltimaTramitacao) : undefined,
+                        dataDaUltimaMovimentacao: prop.dataDaUltimaMovimentacao ? new Date(prop.dataDaUltimaMovimentacao) : undefined,
+                        dataOrdenacao: prop.dataOrdenacao ? new Date(prop.dataOrdenacao) : undefined,
                         autores: prop.autores || [],
                         txtRegime: prop.txtRegime || "",
                         txtApreciacao: prop.txtApreciacao || "",
                         linkVideo: prop.linkVideo || "",
                         explicacaoEmenta: prop.explicacaoEmenta || "",
                         comissaoPreponderante: prop.comissaoPreponderante || "",
-                        qtdeDeTramitacoes: prop.qtdeDeTramitacoes || 0
+                        qtdeDeTramitacoes: prop.qtdeDeTramitacoes || 0,
+                        tipoSituacaoProposicao: prop.tipoSituacaoProposicao || "",
+                        resultadoItens: prop['resultado-itens'] || [],
+                        codProposicaoApensadaPai: prop.codProposicaoApensadaPai || null
                     },
                     $setOnInsert: {
                         _id: prop.id
