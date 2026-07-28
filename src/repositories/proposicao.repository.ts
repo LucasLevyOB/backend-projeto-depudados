@@ -114,6 +114,8 @@ export class ProposicaoRepository {
                 temas: 1,
                 _id: 0,
                 id: 1,
+                tipoSituacaoProposicao: 1,
+                titulo: 1,
             })
             .sort({ dataApresentacao: -1 })
             .skip(skip)
