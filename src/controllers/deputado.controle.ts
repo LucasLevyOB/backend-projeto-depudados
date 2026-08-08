@@ -38,6 +38,24 @@ export class DeputadoController {
         }
     }
 
+    async findVotacoes(req: Request, res: Response): Promise<void> {
+        try {
+            const id = Number(req.params.id);
+            const page = Number(req.query.page) || 1;
+            const limit = Number(req.query.limit) || 20;
+
+            if (isNaN(id)) {
+                res.status(400).json({ error: "ID do deputado inválido" });
+                return;
+            }
+
+            const votacoes = await this.deputadoService.findVotacoes(id, page, limit);
+            res.json(votacoes);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Erro interno do servidor" });
+        }
+    }
     async findById(req: Request, res: Response): Promise<void> {
         try {
             const id = Number(req.params.id);

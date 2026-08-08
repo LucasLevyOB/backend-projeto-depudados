@@ -2,6 +2,8 @@ import { DeputadoRepository } from "@/repositories/deputado.repository";
 import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoService } from "@/services/proposicao.service";
 import { DespesaService } from "@/services/despesa.service";
+import { VotoDeputadoService } from "@/services/votoDeputado.service";
+import { VotacaoService } from "@/services/votacao.service";
 import { calcularScoreEficiencia, calcularCustoPorProducao, agruparResumoProposicoes } from "@/utils/estatisticas.util";
 import { IPagedResponse } from "@/types";
 import { IDeputado } from "@/models/deputado.model";
@@ -11,17 +13,23 @@ export class DeputadoService {
     private readonly proposicaoAutorService: ProposicaoAutorService;
     private readonly proposicaoService: ProposicaoService;
     private readonly despesaService: DespesaService;
+    private readonly votoDeputadoService: VotoDeputadoService;
+    private readonly votacaoService: VotacaoService;
 
     constructor(
         repositorio: DeputadoRepository,
         proposicaoAutorService: ProposicaoAutorService,
         proposicaoService: ProposicaoService,
-        despesaService: DespesaService
+        despesaService: DespesaService,
+        votoDeputadoService: VotoDeputadoService,
+        votacaoService: VotacaoService
     ) {
         this.repositorio = repositorio;
         this.proposicaoAutorService = proposicaoAutorService;
         this.proposicaoService = proposicaoService;
         this.despesaService = despesaService;
+        this.votoDeputadoService = votoDeputadoService;
+        this.votacaoService = votacaoService;
     }
 
     async findAll(page: number = 1, limit: number = 20, uf?: string, siglaPartido?: string, nome?: string): Promise<IPagedResponse<IDeputado>> {
@@ -70,6 +78,37 @@ export class DeputadoService {
         const proposicaoIds = autores.map(a => a.idProposicao);
 
         return await this.proposicaoService.findByIdsWithPagination(proposicaoIds, page, limit);
+    }
+
+    async findVotacoes(idDeputado: number, page: number = 1, limit: number = 20) {
+        const votosPaginados = await this.votoDeputadoService.findByDeputadoId(idDeputado, page, limit);
+
+        const idVotacoes = [...new Set(votosPaginados.data.map(v => v.idVotacao))];
+        const votacoes = await this.votacaoService.findByIds(idVotacoes);
+
+        const idProposicoes = [...new Set(
+            votacoes
+                .map(v => v.ultimaApresentacaoProposicao?.idProposicao)
+                .filter(id => id != null && id !== 0)
+        )];
+        const proposicoes = await this.proposicaoService.findByIds(idProposicoes);
+
+        const dataEnriquecida = votosPaginados.data.map(voto => {
+            const votacao = votacoes.find(v => v.id === voto.idVotacao);
+            const proposicao = votacao?.ultimaApresentacaoProposicao?.idProposicao
+                ? proposicoes.find(p => p.id === votacao.ultimaApresentacaoProposicao.idProposicao)
+                : null;
+            return {
+                ...voto,
+                votacao_: votacao || null,
+                proposicao_: proposicao || null
+            };
+        });
+
+        return {
+            ...votosPaginados,
+            data: dataEnriquecida
+        };
     }
 
     async syncTemasProposicoes(idDeputado: number, codTiposPermitidos?: number[]): Promise<void> {
