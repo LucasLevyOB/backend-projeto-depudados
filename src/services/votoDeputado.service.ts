@@ -9,7 +9,7 @@ export class VotoDeputadoService {
         this.repositorio = repositorio;
     }
 
-    async findByDeputadoId(idDeputado: number | string, page: number = 1, limit: number = 20): Promise<IPagedResponse<IVotoDeputado>> {
-        return await this.repositorio.findByDeputadoId(idDeputado, page, limit);
+    async findByDeputadoId(idDeputado: number | string, page: number = 1, limit: number = 20, idVotacoes?: string[]): Promise<IPagedResponse<IVotoDeputado>> {
+        return await this.repositorio.findByDeputadoId(idDeputado, page, limit, idVotacoes);
     }
 }

@@ -43,13 +43,14 @@ export class DeputadoController {
             const id = Number(req.params.id);
             const page = Number(req.query.page) || 1;
             const limit = Number(req.query.limit) || 20;
+            const ementa = req.query.ementa as string | undefined;
 
             if (isNaN(id)) {
                 res.status(400).json({ error: "ID do deputado inválido" });
                 return;
             }
 
-            const votacoes = await this.deputadoService.findVotacoes(id, page, limit);
+            const votacoes = await this.deputadoService.findVotacoes(id, page, limit, ementa);
             res.json(votacoes);
         } catch (error) {
             console.error(error);

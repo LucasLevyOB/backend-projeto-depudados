@@ -54,6 +54,29 @@ export class ProposicaoRepository {
         return await Proposicao.find();
     }
 
+    async findByEmenta(ementa: string): Promise<IProposicao[]> {
+        const trimmed = ementa.trim();
+        const orConditions: any[] = [{ ementa: { $regex: trimmed, $options: "i" } }];
+        
+        // Pattern matches: "PL 1234/2023", "PLV 13", "PEC"
+        const regex = /^([a-zA-Z]+)(?:\s+(\d+))?(?:\/(\d{4}))?$/;
+        const match = trimmed.match(regex);
+        
+        if (match) {
+            const sigla = match[1];
+            const numero = match[2];
+            const ano = match[3];
+
+            const propCondition: any = { siglaTipo: { $regex: new RegExp(`^${sigla}$`, 'i') } };
+            if (numero) propCondition.numero = Number(numero);
+            if (ano) propCondition.ano = Number(ano);
+            
+            orConditions.push(propCondition);
+        }
+
+        return await Proposicao.find({ $or: orConditions }).lean();
+    }
+
     async findByIdsWithPagination(
         ids: number[],
         page: number,

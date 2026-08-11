@@ -11,4 +11,8 @@ export class VotacaoService {
     async findByIds(ids: string[]): Promise<IVotacao[]> {
         return await this.repositorio.findByIds(ids);
     }
+
+    async findByProposicoes(idsProposicao: number[]): Promise<IVotacao[]> {
+        return await this.repositorio.findByProposicoes(idsProposicao);
+    }
 }

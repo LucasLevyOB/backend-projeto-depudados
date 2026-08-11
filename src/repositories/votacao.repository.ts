@@ -17,4 +17,8 @@ export class VotacaoRepository {
     async findByProposicao(idProposicao: number): Promise<IVotacao[]> {
         return await Votacao.find({ "ultimaApresentacaoProposicao.idProposicao": idProposicao }).lean();
     }
+
+    async findByProposicoes(idsProposicao: number[]): Promise<IVotacao[]> {
+        return await Votacao.find({ "ultimaApresentacaoProposicao.idProposicao": { $in: idsProposicao } }).lean();
+    }
 }

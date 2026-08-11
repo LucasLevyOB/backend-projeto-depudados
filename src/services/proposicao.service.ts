@@ -20,6 +20,10 @@ export class ProposicaoService {
         return await this.repositorio.findByIds(ids);
     }
 
+    async findByEmenta(ementa: string): Promise<IProposicao[]> {
+        return await this.repositorio.findByEmenta(ementa);
+    }
+
     async countByIdsAndTipo(ids: number[], codTipo: number, periodo?: number[]): Promise<number> {
         return await this.repositorio.countByIdsAndTipo(ids, codTipo, periodo);
     }

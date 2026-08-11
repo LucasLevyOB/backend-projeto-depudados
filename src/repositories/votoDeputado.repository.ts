@@ -6,8 +6,21 @@ export class VotoDeputadoRepository {
         return await VotoDeputado.find({ idVotacao }).lean();
     }
 
-    async findByDeputadoId(idDeputado: string | number, page: number = 1, limit: number = 20): Promise<IPagedResponse<IVotoDeputado>> {
-        const query = { "deputado_.id": idDeputado.toString() };
+    async findByDeputadoId(idDeputado: string | number, page: number = 1, limit: number = 20, idVotacoes?: string[]): Promise<IPagedResponse<IVotoDeputado>> {
+        const query: any = { "deputado_.id": idDeputado.toString() };
+        
+        if (idVotacoes && idVotacoes.length > 0) {
+            query.idVotacao = { $in: idVotacoes };
+        } else if (idVotacoes && idVotacoes.length === 0) {
+            return {
+                data: [],
+                total: 0,
+                page,
+                limit,
+                totalPages: 0
+            };
+        }
+
         const total = await VotoDeputado.countDocuments(query);
         const skip = (page - 1) * limit;
 

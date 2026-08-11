@@ -80,8 +80,38 @@ export class DeputadoService {
         return await this.proposicaoService.findByIdsWithPagination(proposicaoIds, page, limit);
     }
 
-    async findVotacoes(idDeputado: number, page: number = 1, limit: number = 20) {
-        const votosPaginados = await this.votoDeputadoService.findByDeputadoId(idDeputado, page, limit);
+    async findVotacoes(idDeputado: number, page: number = 1, limit: number = 20, ementa?: string) {
+        let idVotacoesFiltradas: string[] | undefined = undefined;
+
+        if (ementa) {
+            const proposicoesEncontradas = await this.proposicaoService.findByEmenta(ementa);
+            const idsProposicoes = proposicoesEncontradas.map(p => p.id);
+            
+            if (idsProposicoes.length === 0) {
+                return {
+                    data: [],
+                    total: 0,
+                    page,
+                    limit,
+                    totalPages: 0
+                };
+            }
+
+            const votacoesEncontradas = await this.votacaoService.findByProposicoes(idsProposicoes);
+            idVotacoesFiltradas = votacoesEncontradas.map(v => v.id);
+
+            if (idVotacoesFiltradas.length === 0) {
+                return {
+                    data: [],
+                    total: 0,
+                    page,
+                    limit,
+                    totalPages: 0
+                };
+            }
+        }
+
+        const votosPaginados = await this.votoDeputadoService.findByDeputadoId(idDeputado, page, limit, idVotacoesFiltradas);
 
         const idVotacoes = [...new Set(votosPaginados.data.map(v => v.idVotacao))];
         const votacoes = await this.votacaoService.findByIds(idVotacoes);
