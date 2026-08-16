@@ -7,11 +7,11 @@ const EVENTOS_DIR = path.resolve(__dirname, '../../../dados/eventos');
 const PRESENCAS_DIR = path.resolve(__dirname, '../../../dados/presencas');
 
 async function run() {
-    console.log("Iniciando sincronização de presenças dos deputados...");
+    console.log("Iniciando sincronização de presenças dos deputados com heurística de data...");
 
     // 1. Coletar IDs de eventos válidos
     console.log("Lendo arquivos de eventos...");
-    const eventosValidos = new Set<number>();
+    const eventosValidos = new Map<number, Date>();
     
     if (!fs.existsSync(EVENTOS_DIR)) {
         console.error(`Diretório de eventos não encontrado: ${EVENTOS_DIR}`);
@@ -27,17 +27,18 @@ async function run() {
 
         for (const evento of eventos) {
             if (evento.situacao !== 'Cancelada' && evento.descricaoTipo === 'Sessão Deliberativa') {
-                // A API pode usar 'id' ou '_id'
                 const idEvento = evento.id || evento._id;
-                if (idEvento) {
-                    eventosValidos.add(idEvento);
+                const dataInicio = new Date(evento.dataHoraInicio);
+                
+                if (idEvento && !isNaN(dataInicio.getTime())) {
+                    eventosValidos.set(idEvento, dataInicio);
                 }
             }
         }
     }
 
-    const totalSessoes = eventosValidos.size;
-    console.log(`Encontrados ${totalSessoes} eventos válidos (Sessão Deliberativa não cancelada).`);
+    const totalEventosGlobais = eventosValidos.size;
+    console.log(`Encontrados ${totalEventosGlobais} eventos válidos (Sessão Deliberativa não cancelada).`);
 
     // 2. Contabilizar presenças por deputado
     console.log("Lendo arquivos de presenças...");
@@ -73,18 +74,41 @@ async function run() {
 
     console.log("Atualizando dados no banco...");
     
-    // Buscar todos os deputados do banco para poder atualizar também os que têm 0 presenças (caso necessário)
-    const todosDeputados = await Deputado.find({}, { _id: 1 });
+    // Obter os deputados e seus ultimoStatus
+    const todosDeputados = await Deputado.find({}, { _id: 1, ultimoStatus: 1 });
     
     const bulkOps = todosDeputados.map(deputado => {
         const idDeputado = deputado._id;
-        const totalPresencas = presencasPorDeputado.get(idDeputado) || 0;
-        const totalAusencias = totalSessoes - totalPresencas;
         
-        // Evitar percentual negativo caso haja alguma anomalia de dados
-        const ausencias = Math.max(0, totalAusencias);
-        const percentual = totalSessoes > 0 
-            ? Math.min(100, (totalPresencas / totalSessoes) * 100) 
+        let sessoesAptas = 0;
+        
+        if (deputado.ultimoStatus && deputado.ultimoStatus.situacao && deputado.ultimoStatus.data) {
+            const dataStatus = new Date(deputado.ultimoStatus.data);
+            const situacao = deputado.ultimoStatus.situacao;
+
+            for (const dataEvento of eventosValidos.values()) {
+                if (situacao === 'Exercício') {
+                    if (dataEvento >= dataStatus) {
+                        sessoesAptas++;
+                    }
+                } else {
+                    if (dataEvento <= dataStatus) {
+                        sessoesAptas++;
+                    }
+                }
+            }
+        } else {
+            sessoesAptas = totalEventosGlobais;
+        }
+
+        const totalPresencas = presencasPorDeputado.get(idDeputado) || 0;
+        
+        // Garante que sessoesAptas seja no mínimo igual a totalPresencas para evitar % > 100
+        const sessoesBase = Math.max(sessoesAptas, totalPresencas);
+        const totalAusencias = sessoesBase - totalPresencas;
+        
+        const percentual = sessoesBase > 0 
+            ? Math.min(100, (totalPresencas / sessoesBase) * 100) 
             : 0;
 
         return {
@@ -92,9 +116,9 @@ async function run() {
                 filter: { _id: idDeputado },
                 update: {
                     $set: {
-                        "resumoPresencas.totalSessoes": totalSessoes,
+                        "resumoPresencas.totalSessoes": sessoesBase,
                         "resumoPresencas.presencas": totalPresencas,
-                        "resumoPresencas.ausencias": ausencias,
+                        "resumoPresencas.ausencias": totalAusencias,
                         "resumoPresencas.percentualPresenca": parseFloat(percentual.toFixed(2))
                     }
                 }
