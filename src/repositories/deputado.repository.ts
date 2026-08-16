@@ -12,7 +12,6 @@ export class DeputadoRepository {
             query['ultimoStatus.siglaPartido'] = siglaPartido;
         }
         if (nome) {
-            console.log(regexFlexivel(nome))
             query['nome'] = { $regex: regexFlexivel(nome), $options: 'i' };
         }
         return query;
