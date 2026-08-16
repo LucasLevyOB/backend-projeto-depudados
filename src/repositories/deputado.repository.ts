@@ -80,6 +80,7 @@ export class DeputadoRepository {
                 descricaoStatus: '$ultimoStatus.descricaoStatus',
                 gabinete: '$ultimoStatus.gabinete',
                 urlRedeSocial: 1,
+                resumoPresencas: 1,
             })
     }
 }

@@ -46,6 +46,13 @@ export interface IResumoProposicoes {
     }>;
 }
 
+export interface IResumoPresencas {
+    totalSessoes: number;
+    presencas: number;
+    ausencias: number;
+    percentualPresenca: number;
+}
+
 export interface IDeputado {
     _id: number;
     uri: string;
@@ -75,6 +82,7 @@ export interface IDeputado {
     ultimoStatus?: IStatus;
     resumoGastos?: IResumoGastos[];
     resumoProposicoes?: IResumoProposicoes[];
+    resumoPresencas?: IResumoPresencas;
 }
 
 const DeputadoSchema: Schema = new Schema({
@@ -149,7 +157,13 @@ const DeputadoSchema: Schema = new Schema({
             descricaoTipo: { type: String },
             quantidade: { type: Number, default: 0 }
         }]
-    }]
+    }],
+    resumoPresencas: {
+        totalSessoes: { type: Number, default: 0 },
+        presencas: { type: Number, default: 0 },
+        ausencias: { type: Number, default: 0 },
+        percentualPresenca: { type: Number, default: 0 }
+    }
 }, {
     collation: { locale: "pt", strength: 1 }
 });
