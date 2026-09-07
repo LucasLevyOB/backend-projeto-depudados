@@ -34,4 +34,9 @@ const VotoDeputadoSchema = new Schema<IVotoDeputado>({
     }
 });
 
+VotoDeputadoSchema.index({ "deputado_.id": 1 });
+VotoDeputadoSchema.index({ idVotacao: 1 });
+VotoDeputadoSchema.index({ "deputado_.id": 1, idVotacao: 1 });
+VotoDeputadoSchema.index({ dataHoraVoto: -1 });
+
 export const VotoDeputado = model<IVotoDeputado>('VotoDeputado', VotoDeputadoSchema, 'votosDeputados');

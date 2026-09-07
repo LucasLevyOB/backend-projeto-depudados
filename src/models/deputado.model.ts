@@ -19,6 +19,14 @@ export interface IStatus {
     };
 }
 
+export interface IDeputadoResumo {
+    _id: number;
+    nome: string;
+    urlFoto: string;
+    siglaPartido: string;
+    siglaUf: string;
+}
+
 export interface IResumoGastos {
     ano: number;
     totalGastos: number;

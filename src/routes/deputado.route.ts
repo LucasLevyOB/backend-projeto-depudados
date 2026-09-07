@@ -36,6 +36,7 @@ const deputadoService = new DeputadoService(
 const deputadoController = new DeputadoController(deputadoService);
 
 router.get("/", deputadoController.findAll.bind(deputadoController));
+router.get("/busca", deputadoController.search.bind(deputadoController));
 router.get("/:id", deputadoController.findById.bind(deputadoController));
 router.get("/:id/proposicoes", deputadoController.findProposicoes.bind(deputadoController));
 router.get("/:id/votacoes", deputadoController.findVotacoes.bind(deputadoController));

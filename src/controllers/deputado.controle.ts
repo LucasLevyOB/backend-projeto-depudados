@@ -19,6 +19,22 @@ export class DeputadoController {
         res.json(deputados);
     }
 
+    async search(req: Request, res: Response): Promise<void> {
+        try {
+            const page = Number(req.query.page) || 1;
+            const limit = Number(req.query.limit) || 20;
+            const uf = req.query.uf as string | undefined;
+            const siglaPartido = req.query.siglaPartido as string | undefined;
+            const nome = req.query.nome as string | undefined;
+
+            const deputados = await this.deputadoService.search(page, limit, nome, uf, siglaPartido);
+            res.json(deputados);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Erro interno do servidor" });
+        }
+    }
+
     async findProposicoes(req: Request, res: Response): Promise<void> {
         try {
             const id = Number(req.params.id);

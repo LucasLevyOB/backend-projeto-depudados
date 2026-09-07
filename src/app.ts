@@ -6,6 +6,7 @@ import deputadoRoute from "@/routes/deputado.route";
 import despesaRoute from "@/routes/despesa.route";
 import proposicaoRoute from "@/routes/proposicao.route";
 import partidoRoute from "@/routes/partido.route";
+import votacaoRoute from "@/routes/votacao.route";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use("/deputados", deputadoRoute);
 app.use("/despesas", despesaRoute);
 app.use("/proposicoes", proposicaoRoute);
 app.use("/partidos", partidoRoute);
+app.use("/votacoes", votacaoRoute);
 
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);

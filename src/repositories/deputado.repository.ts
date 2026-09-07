@@ -1,4 +1,4 @@
-import { Deputado, IDeputado } from "@/models/deputado.model";
+import { Deputado, IDeputado, IDeputadoResumo } from "@/models/deputado.model";
 import { IPagedResponse } from "@/types";
 import { regexFlexivel } from "@/utils";
 
@@ -34,6 +34,36 @@ export class DeputadoRepository {
 
         return {
             data: data,
+            total: total,
+            page: page,
+            limit: limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
+
+    async search(page: number = 1, limit: number = 20, nome?: string, uf?: string, siglaPartido?: string): Promise<IPagedResponse<IDeputadoResumo>> {
+        const skip = (page - 1) * limit;
+        const query = this.formatQuery(uf, siglaPartido, nome);
+
+        const total = await Deputado.countDocuments(query);
+
+        const data = await Deputado
+            .find()
+            .select({
+                _id: 1,
+                nome: 1,
+                urlFoto: 1,
+                siglaPartido: '$ultimoStatus.siglaPartido',
+                siglaUf: '$ultimoStatus.siglaUf'
+            })
+            .where(query)
+            .sort({ nome: 1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        return {
+            data: data as unknown as IDeputadoResumo[],
             total: total,
             page: page,
             limit: limit,

@@ -6,7 +6,7 @@ import { VotoDeputadoService } from "@/services/votoDeputado.service";
 import { VotacaoService } from "@/services/votacao.service";
 import { calcularScoreEficiencia, calcularCustoPorProducao, agruparResumoProposicoes } from "@/utils/estatisticas.util";
 import { IPagedResponse } from "@/types";
-import { IDeputado } from "@/models/deputado.model";
+import { IDeputado, IDeputadoResumo } from "@/models/deputado.model";
 
 export class DeputadoService {
     private readonly repositorio: DeputadoRepository;
@@ -34,6 +34,10 @@ export class DeputadoService {
 
     async findAll(page: number = 1, limit: number = 20, uf?: string, siglaPartido?: string, nome?: string): Promise<IPagedResponse<IDeputado>> {
         return await this.repositorio.findAll(page, limit, uf, siglaPartido, nome);
+    }
+
+    async search(page: number = 1, limit: number = 20, nome?: string, uf?: string, siglaPartido?: string): Promise<IPagedResponse<IDeputadoResumo>> {
+        return await this.repositorio.search(page, limit, nome, uf, siglaPartido);
     }
 
     async findById(id: number): Promise<any> {
