@@ -2,10 +2,14 @@ import { DeputadoRepository } from "@/repositories/deputado.repository";
 import { ProposicaoAutorRepository } from "@/repositories/proposicaoAutor.repository";
 import { ProposicaoRepository } from "@/repositories/proposicao.repository";
 import { DespesaRepository } from "@/repositories/despesa.repository";
+import { VotoDeputadoRepository } from "@/repositories/votoDeputado.repository";
+import { VotacaoRepository } from "@/repositories/votacao.repository";
 import { ClassificacaoTemaService } from "@/services/classificacaoTema.service";
 import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoService } from "@/services/proposicao.service";
 import { DespesaService } from "@/services/despesa.service";
+import { VotoDeputadoService } from "@/services/votoDeputado.service";
+import { VotacaoService } from "@/services/votacao.service";
 import { DeputadoService } from "@/services/deputado.service";
 import connectDB from "@/config/database";
 
@@ -69,17 +73,23 @@ async function run() {
     const proposicaoAutorRepository = new ProposicaoAutorRepository();
     const proposicaoRepository = new ProposicaoRepository();
     const despesaRepository = new DespesaRepository();
+    const votoDeputadoRepository = new VotoDeputadoRepository();
+    const votacaoRepository = new VotacaoRepository();
 
     const classificacaoService = new ClassificacaoTemaService();
     const proposicaoAutorService = new ProposicaoAutorService(proposicaoAutorRepository);
     const proposicaoService = new ProposicaoService(proposicaoRepository);
     const despesaService = new DespesaService(despesaRepository);
+    const votoDeputadoService = new VotoDeputadoService(votoDeputadoRepository);
+    const votacaoService = new VotacaoService(votacaoRepository);
 
     const deputadoService = new DeputadoService(
         deputadoRepository,
         proposicaoAutorService,
         proposicaoService,
-        despesaService
+        despesaService,
+        votoDeputadoService,
+        votacaoService
     );
 
     console.log("[syncTemas] Iniciando classificação de temas das proposições via Ollama...");

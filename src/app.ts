@@ -14,8 +14,24 @@ connectDB();
 
 const app = express();
 const PORT = process.env.PORT;
-const corsOptions = {
-    origin: 'http://localhost:5173',
+const productionOrigins = [
+    'https://depudados.web.app',
+    'https://depudados.firebaseapp.com',
+    'https://depudados.com.br'
+];
+
+const allowedOrigins = process.env.NODE_ENV === 'production'
+    ? productionOrigins
+    : [...productionOrigins, 'http://localhost:5173'];
+
+const corsOptions: cors.CorsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Bloqueado pelo CORS'));
+        }
+    },
     optionsSuccessStatus: 200
 };
 

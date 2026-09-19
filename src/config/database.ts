@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { Proposicao } from '@/models/proposicao.model';
 
 dotenv.config();
 
