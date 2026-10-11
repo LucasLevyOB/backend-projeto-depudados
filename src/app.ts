@@ -7,6 +7,7 @@ import despesaRoute from "@/routes/despesa.route";
 import proposicaoRoute from "@/routes/proposicao.route";
 import partidoRoute from "@/routes/partido.route";
 import votacaoRoute from "@/routes/votacao.route";
+import pingRoute from "@/routes/ping.route";
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ app.get('/', (req, res) => {
     res.json({ mensagem: 'API funcionando perfeitamente!' });
 });
 
+app.use("/ping", pingRoute);
 app.use("/deputados", deputadoRoute);
 app.use("/despesas", despesaRoute);
 app.use("/proposicoes", proposicaoRoute);
