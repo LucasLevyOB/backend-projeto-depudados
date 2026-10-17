@@ -18,12 +18,13 @@ const PORT = process.env.PORT;
 const productionOrigins = [
     'https://depudados.web.app',
     'https://depudados.firebaseapp.com',
+    'https://frontend-projeto-deputados--depudados.us-east4.hosted.app',
     'https://depudados.com.br'
 ];
 
 const allowedOrigins = process.env.NODE_ENV === 'production'
     ? productionOrigins
-    : [...productionOrigins, 'http://localhost:5173'];
+    : [...productionOrigins, 'http://localhost:5173', 'http://localhost:8080'];
 
 const corsOptions: cors.CorsOptions = {
     origin: (origin, callback) => {
