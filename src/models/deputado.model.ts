@@ -61,6 +61,21 @@ export interface IResumoPresencas {
     percentualPresenca: number;
 }
 
+export interface IMandatoLegislatura {
+    idLegislatura: number;
+    ultimoStatus: IStatus;
+    estatisticas: {
+        gastosDespesas: number;
+        projetosDeLei: number;
+        totalProposicoes: number;
+        scoreEficiencia: number;
+        custoPorProjetoLei: number | null;
+        custoPorProposicao: number | null;
+        temasProposicoes?: Array<{ tema: string; quantidade: number }>;
+    };
+    resumoPresencas: IResumoPresencas;
+}
+
 export interface IDeputado {
     _id: number;
     uri: string;
@@ -91,6 +106,7 @@ export interface IDeputado {
     resumoGastos?: IResumoGastos[];
     resumoProposicoes?: IResumoProposicoes[];
     resumoPresencas?: IResumoPresencas;
+    mandatos?: IMandatoLegislatura[];
 }
 
 const DeputadoSchema: Schema = new Schema({
@@ -171,9 +187,50 @@ const DeputadoSchema: Schema = new Schema({
         presencas: { type: Number, default: 0 },
         ausencias: { type: Number, default: 0 },
         percentualPresenca: { type: Number, default: 0 }
-    }
+    },
+    mandatos: [{
+        idLegislatura: { type: Number, required: true },
+        ultimoStatus: {
+            situacao: { type: String },
+            condicaoEleitoral: { type: String },
+            siglaPartido: { type: String },
+            siglaUf: { type: String },
+            idLegislatura: { type: Number },
+            nomeEleitoral: { type: String },
+            data: { type: String },
+            descricaoStatus: { type: String },
+            gabinete: {
+                nome: { type: String },
+                predio: { type: String },
+                sala: { type: String },
+                andar: { type: String },
+                telefone: { type: String },
+                email: { type: String }
+            }
+        },
+        estatisticas: {
+            gastosDespesas: { type: Number, default: 0 },
+            projetosDeLei: { type: Number, default: 0 },
+            totalProposicoes: { type: Number, default: 0 },
+            scoreEficiencia: { type: Number, default: 0 },
+            custoPorProjetoLei: { type: Number, default: null },
+            custoPorProposicao: { type: Number, default: null },
+            temasProposicoes: [{
+                tema: { type: String },
+                quantidade: { type: Number, default: 0 }
+            }]
+        },
+        resumoPresencas: {
+            totalSessoes: { type: Number, default: 0 },
+            presencas: { type: Number, default: 0 },
+            ausencias: { type: Number, default: 0 },
+            percentualPresenca: { type: Number, default: 0 }
+        }
+    }]
 }, {
     collation: { locale: "pt", strength: 1 }
 });
+
+DeputadoSchema.index({ "mandatos.idLegislatura": 1, "mandatos.ultimoStatus.situacao": 1, "mandatos.estatisticas.scoreEficiencia": -1 });
 
 export const Deputado = model<IDeputado>('Deputado', DeputadoSchema);

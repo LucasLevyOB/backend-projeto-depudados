@@ -11,8 +11,21 @@ import { VotoDeputadoService } from "@/services/votoDeputado.service";
 import { VotacaoService } from "@/services/votacao.service";
 import { DeputadoService } from "@/services/deputado.service";
 import connectDB from "@/config/database";
+import { LEGISLATURA_PADRAO } from "@/utils/legislatura.util";
+
+const getLegislaturaArg = (): number => {
+    const arg = process.argv.find(a => a.startsWith('--legislatura='));
+    if (arg) {
+        const val = Number(arg.split('=')[1]);
+        if (!isNaN(val)) return val;
+    }
+    return Number(process.env.LEGISLATURA_ATUAL ?? LEGISLATURA_PADRAO);
+};
 
 async function run() {
+    const idLegislatura = getLegislaturaArg();
+    console.log(`[syncEstatisticas] Executando para a legislatura ${idLegislatura}...`);
+
     console.log("Conectando ao MongoDB...");
     await connectDB();
     console.log("Conectado com sucesso.");
@@ -39,8 +52,8 @@ async function run() {
         votacaoService
     );
 
-    console.log("Iniciando sincronização de estatísticas dos deputados...");
-    await deputadoService.syncAllEstatisticas();
+    console.log(`Iniciando sincronização de estatísticas dos deputados para a legislatura ${idLegislatura}...`);
+    await deputadoService.syncAllEstatisticas(idLegislatura);
 
     console.log("Sincronização finalizada com sucesso!");
     process.exit(0);

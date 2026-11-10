@@ -5,6 +5,7 @@ import { DespesaService } from "@/services/despesa.service";
 import { VotoDeputadoService } from "@/services/votoDeputado.service";
 import { VotacaoService } from "@/services/votacao.service";
 import { calcularScoreEficiencia, calcularCustoPorProducao, agruparResumoProposicoes } from "@/utils/estatisticas.util";
+import { LEGISLATURA_PADRAO, getAnosByLegislatura } from "@/utils/legislatura.util";
 import { IPagedResponse } from "@/types";
 import { IDeputado, IDeputadoResumo } from "@/models/deputado.model";
 
@@ -32,59 +33,93 @@ export class DeputadoService {
         this.votacaoService = votacaoService;
     }
 
-    async findAll(page: number = 1, limit: number = 20, uf?: string, siglaPartido?: string, nome?: string): Promise<IPagedResponse<IDeputado>> {
-        return await this.repositorio.findAll(page, limit, uf, siglaPartido, nome);
+    async findAll(
+        page: number = 1,
+        limit: number = 20,
+        uf?: string,
+        siglaPartido?: string,
+        nome?: string,
+        idLegislatura: number = LEGISLATURA_PADRAO
+    ): Promise<IPagedResponse<IDeputado>> {
+        return await this.repositorio.findAll(page, limit, uf, siglaPartido, nome, idLegislatura);
     }
 
-    async search(page: number = 1, limit: number = 20, nome?: string, uf?: string, siglaPartido?: string): Promise<IPagedResponse<IDeputadoResumo>> {
-        return await this.repositorio.search(page, limit, nome, uf, siglaPartido);
+    async search(
+        page: number = 1,
+        limit: number = 20,
+        nome?: string,
+        uf?: string,
+        siglaPartido?: string,
+        idLegislatura: number = LEGISLATURA_PADRAO
+    ): Promise<IPagedResponse<IDeputadoResumo>> {
+        return await this.repositorio.search(page, limit, nome, uf, siglaPartido, idLegislatura);
     }
 
-    async findById(id: number): Promise<any> {
-        return await this.repositorio.findById(id);
+    async findById(id: number, idLegislatura: number = LEGISLATURA_PADRAO): Promise<any> {
+        return await this.repositorio.findById(id, idLegislatura);
     }
 
-    async syncAllEstatisticas(): Promise<void> {
-        const deputados = await this.repositorio.findAllSync();
+    async syncAllEstatisticas(idLegislatura: number = LEGISLATURA_PADRAO): Promise<void> {
+        const deputados = await this.repositorio.findAllSync(idLegislatura);
+        const anos = getAnosByLegislatura(idLegislatura);
 
         for (const deputado of deputados) {
-            const gastosDespesas = await this.despesaService.getGastosDespesasByDeputado(deputado._id);
+            const gastosDespesas = await this.despesaService.getGastosDespesasByDeputado(deputado._id, anos);
 
             const proposicoesAutorias = await this.proposicaoAutorService.findByDeputadoId(deputado._id);
             const proposicaoIds = proposicoesAutorias.map(a => a.idProposicao);
-            const totalProjetos = await this.proposicaoService.countByIdsAndTipo(proposicaoIds, 139);
-            const totalProposicoes = proposicaoIds.length;
 
-            const proposicoes = await this.proposicaoService.findByIds(proposicaoIds);
+            const totalProjetos = await this.proposicaoService.countByIdsAndTipo(proposicaoIds, 139, anos);
+            const proposicoes = await this.proposicaoService.findByIds(proposicaoIds, anos);
+            const totalProposicoes = proposicoes.length;
+
             const scoreEficiencia = calcularScoreEficiencia(proposicoes, gastosDespesas);
 
             const custoPorPL = calcularCustoPorProducao(totalProjetos, gastosDespesas);
             const custoPorProposicaoGeral = calcularCustoPorProducao(totalProposicoes, gastosDespesas);
 
-            const resumoGastos = await this.despesaService.getResumoGastosByDeputado(deputado._id);
+            const resumoGastos = await this.despesaService.getResumoGastosByDeputado(deputado._id, anos);
             const resumoProposicoes = agruparResumoProposicoes(proposicoes);
 
-            await this.repositorio.updateEstatisticas(deputado._id, {
-                gastosDespesas: gastosDespesas,
-                projetosDeLei: totalProjetos,
-                totalProposicoes: totalProposicoes,
-                scoreEficiencia: scoreEficiencia,
-                custoPorProjetoLei: custoPorPL,
-                custoPorProposicao: custoPorProposicaoGeral
-            }, resumoGastos, resumoProposicoes);
+            await this.repositorio.updateEstatisticas(
+                deputado._id,
+                {
+                    gastosDespesas: gastosDespesas,
+                    projetosDeLei: totalProjetos,
+                    totalProposicoes: totalProposicoes,
+                    scoreEficiencia: scoreEficiencia,
+                    custoPorProjetoLei: custoPorPL,
+                    custoPorProposicao: custoPorProposicaoGeral
+                },
+                resumoGastos,
+                resumoProposicoes,
+                idLegislatura
+            );
 
-            await this.syncTemasProposicoes(deputado._id, [139]);
+            await this.syncTemasProposicoes(deputado._id, [139], idLegislatura);
         }
     }
 
-    async findProposicoes(idDeputado: number, page: number = 1, limit: number = 20) {
+    async findProposicoes(
+        idDeputado: number,
+        page: number = 1,
+        limit: number = 20,
+        idLegislatura: number = LEGISLATURA_PADRAO
+    ) {
         const autores = await this.proposicaoAutorService.findByDeputadoId(idDeputado);
         const proposicaoIds = autores.map(a => a.idProposicao);
+        const anos = getAnosByLegislatura(idLegislatura);
 
-        return await this.proposicaoService.findByIdsWithPagination(proposicaoIds, page, limit);
+        return await this.proposicaoService.findByIdsWithPagination(proposicaoIds, page, limit, anos);
     }
 
-    async findVotacoes(idDeputado: number, page: number = 1, limit: number = 20, ementa?: string) {
+    async findVotacoes(
+        idDeputado: number,
+        page: number = 1,
+        limit: number = 20,
+        ementa?: string,
+        idLegislatura: number = LEGISLATURA_PADRAO
+    ) {
         let idVotacoesFiltradas: string[] | undefined = undefined;
 
         if (ementa) {
@@ -115,7 +150,13 @@ export class DeputadoService {
             }
         }
 
-        const votosPaginados = await this.votoDeputadoService.findByDeputadoId(idDeputado, page, limit, idVotacoesFiltradas);
+        const votosPaginados = await this.votoDeputadoService.findByDeputadoId(
+            idDeputado,
+            page,
+            limit,
+            idVotacoesFiltradas,
+            idLegislatura
+        );
 
         const idVotacoes = [...new Set(votosPaginados.data.map(v => v.idVotacao))];
         const votacoes = await this.votacaoService.findByIds(idVotacoes);
@@ -145,10 +186,16 @@ export class DeputadoService {
         };
     }
 
-    async syncTemasProposicoes(idDeputado: number, codTiposPermitidos?: number[]): Promise<void> {
+    async syncTemasProposicoes(
+        idDeputado: number,
+        codTiposPermitidos?: number[],
+        idLegislatura: number = LEGISLATURA_PADRAO
+    ): Promise<void> {
         const autores = await this.proposicaoAutorService.findByDeputadoId(idDeputado);
         const proposicaoIds = autores.map(a => a.idProposicao);
-        let proposicoes = await this.proposicaoService.findByIds(proposicaoIds);
+        const anos = getAnosByLegislatura(idLegislatura);
+
+        let proposicoes = await this.proposicaoService.findByIds(proposicaoIds, anos);
 
         if (codTiposPermitidos && codTiposPermitidos.length > 0) {
             proposicoes = proposicoes.filter(p => codTiposPermitidos.includes(p.codTipo));
@@ -168,6 +215,6 @@ export class DeputadoService {
             .map(([tema, quantidade]) => ({ tema, quantidade }))
             .sort((a, b) => b.quantidade - a.quantidade);
 
-        await this.repositorio.updateTemasProposicoes(idDeputado, temasProposicoes);
+        await this.repositorio.updateTemasProposicoes(idDeputado, temasProposicoes, idLegislatura);
     }
 }

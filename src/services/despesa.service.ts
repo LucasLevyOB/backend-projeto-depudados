@@ -18,16 +18,17 @@ export class DespesaService {
     page: number = 1,
     limit: number = 20,
     ano?: number,
-    descricao?: string
+    descricao?: string,
+    idLegislatura?: number
   ): Promise<IPagedResponse<IDespesa>> {
-    return await this.repositorio.findByDeputado(idDeputado, page, limit, ano, descricao);
+    return await this.repositorio.findByDeputado(idDeputado, page, limit, ano, descricao, idLegislatura);
   }
 
-  async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {
-    return await this.repositorio.getGastosDespesasByDeputado(idDeputado);
+  async getGastosDespesasByDeputado(idDeputado: number, anos?: number[]): Promise<number> {
+    return await this.repositorio.getGastosDespesasByDeputado(idDeputado, anos);
   }
 
-  async getResumoGastosByDeputado(idDeputado: number): Promise<any[]> {
-    return await this.repositorio.getResumoGastosByDeputado(idDeputado);
+  async getResumoGastosByDeputado(idDeputado: number, anos?: number[]): Promise<any[]> {
+    return await this.repositorio.getResumoGastosByDeputado(idDeputado, anos);
   }
 }

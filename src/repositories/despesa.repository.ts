@@ -1,5 +1,6 @@
 import { Despesa, IDespesa } from "@/models/despesa.model";
 import { IPagedResponse } from "@/types";
+import { getAnosByLegislatura } from "@/utils/legislatura.util";
 
 export class DespesaRepository {
   async findAll(): Promise<IDespesa[]> {
@@ -11,13 +12,16 @@ export class DespesaRepository {
     page: number = 1,
     limit: number = 20,
     ano?: number,
-    descricao?: string
+    descricao?: string,
+    idLegislatura?: number
   ): Promise<IPagedResponse<IDespesa>> {
     const skip = (page - 1) * limit;
-    let query: any = { idDeputado };
+    const query: any = { idDeputado };
 
     if (ano) {
       query.ano = ano;
+    } else if (idLegislatura) {
+      query.ano = { $in: getAnosByLegislatura(idLegislatura) };
     }
 
     if (descricao) {
@@ -50,10 +54,16 @@ export class DespesaRepository {
     };
   }
 
-  async getGastosDespesasByDeputado(idDeputado: number): Promise<number> {
-    const despesas = await Despesa.find({ idDeputado: idDeputado })
+  async getGastosDespesasByDeputado(idDeputado: number, anos?: number[]): Promise<number> {
+    const query: any = { idDeputado };
+    if (anos && anos.length > 0) {
+      query.ano = { $in: anos };
+    }
+
+    const despesas = await Despesa.find(query)
       .select("valorLiquido")
       .lean();
+
     return despesas.reduce((total, d) => {
       if (!d.valorLiquido) return total;
       const valor = parseFloat(d.valorLiquido.toString().replace(",", "."));
@@ -61,8 +71,13 @@ export class DespesaRepository {
     }, 0);
   }
 
-  async getResumoGastosByDeputado(idDeputado: number): Promise<any[]> {
-    const despesas = await Despesa.find({ idDeputado: idDeputado })
+  async getResumoGastosByDeputado(idDeputado: number, anos?: number[]): Promise<any[]> {
+    const query: any = { idDeputado };
+    if (anos && anos.length > 0) {
+      query.ano = { $in: anos };
+    }
+
+    const despesas = await Despesa.find(query)
       .select("ano mes valorLiquido descricao")
       .lean();
 

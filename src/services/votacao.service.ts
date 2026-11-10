@@ -44,7 +44,8 @@ export class VotacaoService {
         idDeputado2?: string | number,
         page: number = 1,
         limit: number = 10,
-        ementa?: string
+        ementa?: string,
+        idLegislatura?: number
     ): Promise<IPagedResponse<VotacaoComparadaItem>> {
         if (!this.votoDeputadoService) {
             throw new Error("VotoDeputadoService não injetado no VotacaoService");
@@ -108,7 +109,8 @@ export class VotacaoService {
             idsDeputados,
             page,
             limit,
-            idVotacoesFiltradas
+            idVotacoesFiltradas,
+            idLegislatura
         );
 
         if (idVotacoes.length === 0) {

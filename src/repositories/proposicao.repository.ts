@@ -1,9 +1,16 @@
 import { Proposicao, IProposicao } from "@/models/proposicao.model";
 import { ProposicaoAutor } from "@/models/proposicaoAutor.model";
 import { IPagedResponse } from "@/types";
+import { getAnosByLegislatura } from "@/utils/legislatura.util";
 
 export class ProposicaoRepository {
-    private getQuery(siglaTipo?: string, ementa?: string, ano?: number, idsProposicoes?: number[]): any {
+    private getQuery(
+        siglaTipo?: string,
+        ementa?: string,
+        ano?: number,
+        idsProposicoes?: number[],
+        anos?: number[]
+    ): any {
         let query: any = { id: { $in: idsProposicoes } };
 
         if (siglaTipo) {
@@ -46,6 +53,39 @@ export class ProposicaoRepository {
                     },
                 },
             ];
+        } else if (anos && anos.length > 0) {
+            const anosStr = anos.map(a => a.toString());
+            query.$or = [
+                { ano: { $in: anos } },
+                {
+                    $expr: {
+                        $in: [
+                            {
+                                $substrCP: [
+                                    { $toString: { $ifNull: ["$dataApresentacao", "0000"] } },
+                                    0,
+                                    4,
+                                ],
+                            },
+                            anosStr,
+                        ],
+                    },
+                },
+                {
+                    $expr: {
+                        $in: [
+                            {
+                                $substrCP: [
+                                    { $toString: { $ifNull: ["$ultimoStatus.data", "0000"] } },
+                                    0,
+                                    4,
+                                ],
+                            },
+                            anosStr,
+                        ],
+                    },
+                },
+            ];
         }
         return query;
     }
@@ -81,16 +121,25 @@ export class ProposicaoRepository {
         ids: number[],
         page: number,
         limit: number,
+        anos?: number[]
     ): Promise<IProposicao[]> {
         const skip = (page - 1) * limit;
-        return await Proposicao.find({ _id: { $in: ids } })
+        const query: any = { _id: { $in: ids } };
+        if (anos && anos.length > 0) {
+            query.ano = { $in: anos };
+        }
+        return await Proposicao.find(query)
             .sort({ dataApresentacao: -1 })
             .skip(skip)
             .limit(limit);
     }
 
-    async findByIds(ids: number[]): Promise<IProposicao[]> {
-        return await Proposicao.find({ _id: { $in: ids } }).lean();
+    async findByIds(ids: number[], anos?: number[]): Promise<IProposicao[]> {
+        const query: any = { _id: { $in: ids } };
+        if (anos && anos.length > 0) {
+            query.ano = { $in: anos };
+        }
+        return await Proposicao.find(query).lean();
     }
 
     async countByIdsAndTipo(
@@ -115,13 +164,15 @@ export class ProposicaoRepository {
         siglaTipo?: string,
         ementa?: string,
         ano?: number,
+        idLegislatura?: number
     ): Promise<IPagedResponse<IProposicao>> {
         const autores = await ProposicaoAutor.find({ idDeputadoAutor: idDeputado })
             .select("idProposicao")
             .lean();
         const idsProposicoes = autores.map((a) => a.idProposicao);
 
-        const query = this.getQuery(siglaTipo, ementa, ano, idsProposicoes);
+        const anos = idLegislatura ? getAnosByLegislatura(idLegislatura) : undefined;
+        const query = this.getQuery(siglaTipo, ementa, ano, idsProposicoes, anos);
 
         const total = await Proposicao.countDocuments(query);
         const skip = (page - 1) * limit;

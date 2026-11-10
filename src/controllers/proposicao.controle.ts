@@ -9,8 +9,13 @@ export class ProposicaoController {
     }
 
     async findAll(req: Request, res: Response): Promise<void> {
-        const proposicoes = await this.proposicaoService.findAll();
-        res.json(proposicoes);
+        try {
+            const proposicoes = await this.proposicaoService.findAll();
+            res.json(proposicoes);
+        } catch (error) {
+            console.error("Erro ao listar proposições:", error);
+            res.status(500).json({ error: "Erro interno do servidor" });
+        }
     }
 
     async findByDeputado(req: Request, res: Response): Promise<void> {
@@ -21,6 +26,12 @@ export class ProposicaoController {
             const siglaTipo = req.query.siglaTipo as string | undefined;
             const ementa = req.query.ementa as string | undefined;
             const ano = req.query.ano ? Number(req.query.ano) : undefined;
+            const legislatura = req.query.legislatura ? Number(req.query.legislatura) : undefined;
+
+            if (isNaN(idDeputado)) {
+                res.status(400).json({ error: "ID do deputado inválido" });
+                return;
+            }
 
             const response = await this.proposicaoService.findByDeputado(
                 idDeputado,
@@ -28,13 +39,14 @@ export class ProposicaoController {
                 limit,
                 siglaTipo,
                 ementa,
-                ano
+                ano,
+                legislatura
             );
 
             res.json(response);
         } catch (error) {
-            console.error("Error finding proposicoes by deputado:", error);
-            res.status(500).json({ error: "Internal Server Error" });
+            console.error("Erro ao buscar proposições do deputado:", error);
+            res.status(500).json({ error: "Erro interno do servidor" });
         }
     }
 }

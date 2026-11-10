@@ -1,12 +1,19 @@
 import { VotoDeputado, IVotoDeputado } from "@/models/votoDeputado.model";
 import { IPagedResponse } from "@/types/PagedResponse";
+import { getPeriodoDatasByLegislatura } from "@/utils/legislatura.util";
 
 export class VotoDeputadoRepository {
     async findByVotacaoId(idVotacao: string): Promise<IVotoDeputado[]> {
         return await VotoDeputado.find({ idVotacao }).lean();
     }
 
-    async findByDeputadoId(idDeputado: string | number, page: number = 1, limit: number = 20, idVotacoes?: string[]): Promise<IPagedResponse<IVotoDeputado>> {
+    async findByDeputadoId(
+        idDeputado: string | number,
+        page: number = 1,
+        limit: number = 20,
+        idVotacoes?: string[],
+        idLegislatura?: number
+    ): Promise<IPagedResponse<IVotoDeputado>> {
         const query: any = { "deputado_.id": idDeputado.toString() };
         
         if (idVotacoes && idVotacoes.length > 0) {
@@ -21,10 +28,16 @@ export class VotoDeputadoRepository {
             };
         }
 
+        if (idLegislatura) {
+            const { inicio, fim } = getPeriodoDatasByLegislatura(idLegislatura);
+            query.dataHoraVoto = { $gte: inicio, $lte: fim };
+        }
+
         const total = await VotoDeputado.countDocuments(query);
         const skip = (page - 1) * limit;
 
         const data = await VotoDeputado.find(query)
+            .sort({ dataHoraVoto: -1 })
             .skip(skip)
             .limit(limit)
             .lean();
@@ -49,7 +62,8 @@ export class VotoDeputadoRepository {
         idsDeputados: (string | number)[],
         page: number = 1,
         limit: number = 10,
-        idVotacoesFiltradas?: string[]
+        idVotacoesFiltradas?: string[],
+        idLegislatura?: number
     ): Promise<{ idVotacoes: string[]; total: number; totalPages: number }> {
         if (!idsDeputados || idsDeputados.length === 0) {
             return { idVotacoes: [], total: 0, totalPages: 0 };
@@ -66,6 +80,11 @@ export class VotoDeputadoRepository {
 
         if (idVotacoesFiltradas && idVotacoesFiltradas.length > 0) {
             matchStage.idVotacao = { $in: idVotacoesFiltradas };
+        }
+
+        if (idLegislatura) {
+            const { inicio, fim } = getPeriodoDatasByLegislatura(idLegislatura);
+            matchStage.dataHoraVoto = { $gte: inicio, $lte: fim };
         }
 
         const skip = (page - 1) * limit;

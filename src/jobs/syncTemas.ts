@@ -12,8 +12,18 @@ import { VotoDeputadoService } from "@/services/votoDeputado.service";
 import { VotacaoService } from "@/services/votacao.service";
 import { DeputadoService } from "@/services/deputado.service";
 import connectDB from "@/config/database";
+import { LEGISLATURA_PADRAO } from "@/utils/legislatura.util";
 
 const LOTE_PROPOSICOES = Number(process.env.LOTE_PROPOSICOES ?? 50);
+
+const getLegislaturaArg = (): number => {
+    const arg = process.argv.find(a => a.startsWith('--legislatura='));
+    if (arg) {
+        const val = Number(arg.split('=')[1]);
+        if (!isNaN(val)) return val;
+    }
+    return Number(process.env.LEGISLATURA_ATUAL ?? LEGISLATURA_PADRAO);
+};
 
 const classificarProposicoes = async (
     proposicaoService: ProposicaoService,
@@ -46,14 +56,18 @@ const classificarProposicoes = async (
     console.log(`[syncTemas] Classificação concluída. Total: ${totalProcessadas} proposições.`);
 };
 
-const agregarTemasPorDeputado = async (deputadoService: DeputadoService, deputadoRepository: DeputadoRepository): Promise<void> => {
-    const deputados = await deputadoRepository.findAllSync();
-    console.log(`[syncTemas] Agregando temas para ${deputados.length} deputados...`);
+const agregarTemasPorDeputado = async (
+    deputadoService: DeputadoService,
+    deputadoRepository: DeputadoRepository,
+    idLegislatura: number
+): Promise<void> => {
+    const deputados = await deputadoRepository.findAllSync(idLegislatura);
+    console.log(`[syncTemas] Agregando temas para ${deputados.length} deputados na legislatura ${idLegislatura}...`);
 
     let totalAtualizados = 0;
 
     for (const deputado of deputados) {
-        await deputadoService.syncTemasProposicoes(deputado._id, [139]);
+        await deputadoService.syncTemasProposicoes(deputado._id, [139], idLegislatura);
         totalAtualizados++;
 
         if (totalAtualizados % 50 === 0) {
@@ -65,6 +79,9 @@ const agregarTemasPorDeputado = async (deputadoService: DeputadoService, deputad
 };
 
 async function run() {
+    const idLegislatura = getLegislaturaArg();
+    console.log(`[syncTemas] Executando para a legislatura ${idLegislatura}...`);
+
     console.log("[syncTemas] Conectando ao MongoDB...");
     await connectDB();
     console.log("[syncTemas] Conectado com sucesso.");
@@ -96,13 +113,13 @@ async function run() {
     await classificarProposicoes(proposicaoService, classificacaoService);
 
     console.log("[syncTemas] Iniciando agregação de temas por deputado...");
-    await agregarTemasPorDeputado(deputadoService, deputadoRepository);
+    await agregarTemasPorDeputado(deputadoService, deputadoRepository, idLegislatura);
 
-    console.log("[syncTemas] Sincronização de temas concluída com sucesso!");
+    console.log("[syncTemas] Sincronização finalizada com sucesso!");
     process.exit(0);
 }
 
 run().catch(err => {
-    console.error("[syncTemas] Erro durante a sincronização:", err);
+    console.error("[syncTemas] Erro durante a execução:", err);
     process.exit(1);
 });

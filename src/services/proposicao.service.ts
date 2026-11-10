@@ -12,12 +12,12 @@ export class ProposicaoService {
         return await this.repositorio.findAll();
     }
 
-    async findByIdsWithPagination(ids: number[], page: number, limit: number): Promise<IProposicao[]> {
-        return await this.repositorio.findByIdsWithPagination(ids, page, limit);
+    async findByIdsWithPagination(ids: number[], page: number, limit: number, anos?: number[]): Promise<IProposicao[]> {
+        return await this.repositorio.findByIdsWithPagination(ids, page, limit, anos);
     }
 
-    async findByIds(ids: number[]): Promise<IProposicao[]> {
-        return await this.repositorio.findByIds(ids);
+    async findByIds(ids: number[], anos?: number[]): Promise<IProposicao[]> {
+        return await this.repositorio.findByIds(ids, anos);
     }
 
     async findByEmenta(ementa: string): Promise<IProposicao[]> {
@@ -28,8 +28,16 @@ export class ProposicaoService {
         return await this.repositorio.countByIdsAndTipo(ids, codTipo, periodo);
     }
 
-    async findByDeputado(idDeputado: number, page: number = 1, limit: number = 20, siglaTipo?: string, ementa?: string, ano?: number) {
-        return await this.repositorio.findByDeputado(idDeputado, page, limit, siglaTipo, ementa, ano);
+    async findByDeputado(
+        idDeputado: number,
+        page: number = 1,
+        limit: number = 20,
+        siglaTipo?: string,
+        ementa?: string,
+        ano?: number,
+        idLegislatura?: number
+    ) {
+        return await this.repositorio.findByDeputado(idDeputado, page, limit, siglaTipo, ementa, ano, idLegislatura);
     }
 
     async findSemTemas(limit: number, codTipo?: number): Promise<IProposicao[]> {

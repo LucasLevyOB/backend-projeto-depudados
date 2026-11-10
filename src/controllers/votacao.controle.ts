@@ -15,6 +15,7 @@ export class VotacaoController {
             const page = req.query.page ? Number(req.query.page) : 1;
             const limit = req.query.limit ? Number(req.query.limit) : 10;
             const ementa = req.query.ementa as string | undefined;
+            const legislatura = req.query.legislatura ? Number(req.query.legislatura) : undefined;
 
             if (!deputado1 && !deputado2) {
                 res.status(400).json({ error: "É necessário informar ao menos um deputado (deputado1 ou deputado2)" });
@@ -26,7 +27,8 @@ export class VotacaoController {
                 deputado2,
                 page,
                 limit,
-                ementa
+                ementa,
+                legislatura
             );
 
             res.json(resultado);
