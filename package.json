@@ -12,7 +12,9 @@
     "sync:temas": "ts-node -r tsconfig-paths/register src/jobs/syncTemas.ts",
     "reset:temas": "ts-node -r tsconfig-paths/register src/jobs/resetTemas.ts",
     "sync:proposicoes": "ts-node -r tsconfig-paths/register src/jobs/syncProposicoesBusca.ts",
-    "sync:presencas": "ts-node -r tsconfig-paths/register src/jobs/syncPresencas.ts"
+    "sync:presencas": "ts-node -r tsconfig-paths/register src/jobs/syncPresencas.ts",
+    "sync:cadastros": "ts-node -r tsconfig-paths/register src/jobs/syncCadastros.ts",
+    "sync:anual": "ts-node -r tsconfig-paths/register src/jobs/syncDadosAnuais.ts"
   },
   "keywords": [],
   "author": "",

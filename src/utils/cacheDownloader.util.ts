@@ -79,6 +79,24 @@ export const baixarZipParaCache = async (
     return destino;
 };
 
+/**
+ * Reaproveita `destino` se existir; senão executa `produzir` (ex.: chamadas à API) e grava o resultado no cache.
+ */
+export const cacheJson = async <T>(
+    destino: string,
+    produzir: () => Promise<T>,
+    { force = false }: IOpcoesCache = {}
+): Promise<T> => {
+    if (!force && await existe(destino)) {
+        console.log(`[cache] Reutilizando ${destino}`);
+        return lerJson<T>(destino);
+    }
+
+    const dados = await produzir();
+    await gravarJson(destino, dados);
+    return dados;
+};
+
 export const lerJson = async <T>(caminho: string): Promise<T> =>
     JSON.parse(await fs.readFile(caminho, "utf8")) as T;
 
