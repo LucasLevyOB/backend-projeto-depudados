@@ -7,6 +7,7 @@ import { syncProposicoesBusca } from "@/jobs/syncProposicoesBusca";
 import { classificarTemas } from "@/jobs/syncTemas";
 import { parseArgs, resolverAno } from "@/utils/cliArgs.util";
 import { getLegislaturaByAno } from "@/utils/legislatura.util";
+import { garantirBancoLocal } from "@/utils/mongoUri.util";
 
 const ETAPAS = ["cadastros", "anual", "busca", "presencas", "temas", "estatisticas"] as const;
 type Etapa = typeof ETAPAS[number];
@@ -15,27 +16,6 @@ export interface IOpcoesSyncAll {
     force?: boolean;
     skip?: string[];
 }
-
-const HOSTS_LOCAIS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
-
-/**
- * O pipeline pesado roda só no banco local; produção recebe os dados validados pelo `promote:atlas`.
- * Recusa qualquer `DATABASE_URL` que não aponte para esta máquina (incluindo `mongodb+srv`).
- */
-export const garantirBancoLocal = (uri: string | undefined): void => {
-    const host = (() => {
-        try {
-            const url = new URL(uri ?? "");
-            return url.protocol === "mongodb:" ? url.hostname : undefined;
-        } catch {
-            return undefined;
-        }
-    })();
-
-    if (!host || !HOSTS_LOCAIS.has(host)) {
-        throw new Error("DATABASE_URL não aponta para um MongoDB local. O sync:local só roda no banco local; para produção use o promote:atlas.");
-    }
-};
 
 const validarSkip = (skip: string[]): Etapa[] => {
     const invalidas = skip.filter(s => !(ETAPAS as readonly string[]).includes(s));

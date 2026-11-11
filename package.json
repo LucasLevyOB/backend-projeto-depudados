@@ -15,7 +15,9 @@
     "sync:presencas": "ts-node -r tsconfig-paths/register src/jobs/syncPresencas.ts",
     "sync:cadastros": "ts-node -r tsconfig-paths/register src/jobs/syncCadastros.ts",
     "sync:anual": "ts-node -r tsconfig-paths/register src/jobs/syncDadosAnuais.ts",
-    "sync:local": "ts-node -r tsconfig-paths/register src/jobs/syncAll.ts"
+    "sync:local": "ts-node -r tsconfig-paths/register src/jobs/syncAll.ts",
+    "validate:local": "ts-node -r tsconfig-paths/register src/jobs/validarLocal.ts",
+    "promote:atlas": "ts-node -r tsconfig-paths/register src/jobs/promoteToAtlas.ts"
   },
   "keywords": [],
   "author": "",
