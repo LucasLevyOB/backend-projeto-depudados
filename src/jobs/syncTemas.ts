@@ -1,31 +1,14 @@
 import { DeputadoRepository } from "@/repositories/deputado.repository";
-import { ProposicaoAutorRepository } from "@/repositories/proposicaoAutor.repository";
-import { ProposicaoRepository } from "@/repositories/proposicao.repository";
-import { DespesaRepository } from "@/repositories/despesa.repository";
-import { VotoDeputadoRepository } from "@/repositories/votoDeputado.repository";
-import { VotacaoRepository } from "@/repositories/votacao.repository";
 import { ClassificacaoTemaService } from "@/services/classificacaoTema.service";
-import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoService } from "@/services/proposicao.service";
-import { DespesaService } from "@/services/despesa.service";
-import { VotoDeputadoService } from "@/services/votoDeputado.service";
-import { VotacaoService } from "@/services/votacao.service";
 import { DeputadoService } from "@/services/deputado.service";
-import connectDB from "@/config/database";
-import { LEGISLATURA_PADRAO } from "@/utils/legislatura.util";
+import { criarServicos } from "@/jobs/container";
+import { executarJob } from "@/jobs/runner";
+import { parseArgs, resolverLegislatura } from "@/utils/cliArgs.util";
 
 const LOTE_PROPOSICOES = Number(process.env.LOTE_PROPOSICOES ?? 50);
 
-const getLegislaturaArg = (): number => {
-    const arg = process.argv.find(a => a.startsWith('--legislatura='));
-    if (arg) {
-        const val = Number(arg.split('=')[1]);
-        if (!isNaN(val)) return val;
-    }
-    return Number(process.env.LEGISLATURA_ATUAL ?? LEGISLATURA_PADRAO);
-};
-
-const classificarProposicoes = async (
+export const classificarProposicoes = async (
     proposicaoService: ProposicaoService,
     classificacaoService: ClassificacaoTemaService
 ): Promise<void> => {
@@ -35,16 +18,13 @@ const classificarProposicoes = async (
     while (lote.length > 0) {
         console.log(`[syncTemas] Processando lote de ${lote.length} proposições concorrentemente...`);
 
-        const promessasClassificacao = [];
-        for (const proposicao of lote) {
-            const promessa = classificacaoService.classificar(
-                proposicao.ementa ?? "",
-                proposicao.keywords ?? ""
-            ).then((temas) => ({ id: proposicao._id, temas }));
-            promessasClassificacao.push(promessa);
-        }
-
-        const resultados = await Promise.all(promessasClassificacao);
+        const resultados = await Promise.all(
+            lote.map(proposicao =>
+                classificacaoService
+                    .classificar(proposicao.ementa ?? "", proposicao.keywords ?? "")
+                    .then(temas => ({ id: proposicao._id, temas }))
+            )
+        );
         await proposicaoService.atualizarTemasLote(resultados);
 
         totalProcessadas += lote.length;
@@ -56,7 +36,7 @@ const classificarProposicoes = async (
     console.log(`[syncTemas] Classificação concluída. Total: ${totalProcessadas} proposições.`);
 };
 
-const agregarTemasPorDeputado = async (
+export const agregarTemasPorDeputado = async (
     deputadoService: DeputadoService,
     deputadoRepository: DeputadoRepository,
     idLegislatura: number
@@ -78,48 +58,19 @@ const agregarTemasPorDeputado = async (
     console.log(`[syncTemas] Agregação concluída. Total: ${totalAtualizados} deputados.`);
 };
 
-async function run() {
-    const idLegislatura = getLegislaturaArg();
+export const syncTemas = async (idLegislatura: number): Promise<void> => {
     console.log(`[syncTemas] Executando para a legislatura ${idLegislatura}...`);
-
-    console.log("[syncTemas] Conectando ao MongoDB...");
-    await connectDB();
-    console.log("[syncTemas] Conectado com sucesso.");
-
-    const deputadoRepository = new DeputadoRepository();
-    const proposicaoAutorRepository = new ProposicaoAutorRepository();
-    const proposicaoRepository = new ProposicaoRepository();
-    const despesaRepository = new DespesaRepository();
-    const votoDeputadoRepository = new VotoDeputadoRepository();
-    const votacaoRepository = new VotacaoRepository();
-
-    const classificacaoService = new ClassificacaoTemaService();
-    const proposicaoAutorService = new ProposicaoAutorService(proposicaoAutorRepository);
-    const proposicaoService = new ProposicaoService(proposicaoRepository);
-    const despesaService = new DespesaService(despesaRepository);
-    const votoDeputadoService = new VotoDeputadoService(votoDeputadoRepository);
-    const votacaoService = new VotacaoService(votacaoRepository);
-
-    const deputadoService = new DeputadoService(
-        deputadoRepository,
-        proposicaoAutorService,
-        proposicaoService,
-        despesaService,
-        votoDeputadoService,
-        votacaoService
-    );
+    const { deputadoRepository, deputadoService, proposicaoService } = criarServicos();
 
     console.log("[syncTemas] Iniciando classificação de temas das proposições via Ollama...");
-    await classificarProposicoes(proposicaoService, classificacaoService);
+    await classificarProposicoes(proposicaoService, new ClassificacaoTemaService());
 
     console.log("[syncTemas] Iniciando agregação de temas por deputado...");
     await agregarTemasPorDeputado(deputadoService, deputadoRepository, idLegislatura);
 
     console.log("[syncTemas] Sincronização finalizada com sucesso!");
-    process.exit(0);
-}
+};
 
-run().catch(err => {
-    console.error("[syncTemas] Erro durante a execução:", err);
-    process.exit(1);
-});
+if (require.main === module) {
+    executarJob("syncTemas", () => syncTemas(resolverLegislatura(parseArgs())));
+}

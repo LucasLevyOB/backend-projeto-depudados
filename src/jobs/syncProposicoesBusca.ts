@@ -1,7 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
 import { Proposicao } from "@/models/proposicao.model";
-import connectDB from "@/config/database";
+import { executarJob } from "@/jobs/runner";
+
+const ARQUIVO_PADRAO = path.resolve(__dirname, "../../../web-scraping/projeto-depudados.proposicoes-busca.json");
 
 const getTemaPortalOuAutomatico = (prop: any) => {
     if (prop.temaAutomatico && prop.temaAutomatico.length > 0) {
@@ -13,20 +15,14 @@ const getTemaPortalOuAutomatico = (prop: any) => {
     return [];
 };
 
-async function run() {
-    console.log("Conectando ao MongoDB...");
-    await connectDB();
-    console.log("Conectado com sucesso.");
-
+export const syncProposicoesBusca = async (jsonPath: string = ARQUIVO_PADRAO): Promise<void> => {
     console.log("Lendo o arquivo JSON...");
-    const jsonPath = path.resolve(__dirname, "../../../web-scraping/projeto-depudados.proposicoes-busca.json");
 
     let fileContent;
     try {
         fileContent = await fs.readFile(jsonPath, "utf8");
     } catch (err) {
-        console.error("Não foi possível ler o arquivo JSON em:", jsonPath);
-        process.exit(1);
+        throw new Error(`Não foi possível ler o arquivo JSON em: ${jsonPath}`);
     }
 
     const deputados = JSON.parse(fileContent);
@@ -104,11 +100,8 @@ async function run() {
     } catch (err) {
         console.error("Erro durante o bulkWrite:", err);
     }
+};
 
-    process.exit(0);
+if (require.main === module) {
+    executarJob("syncProposicoesBusca", () => syncProposicoesBusca());
 }
-
-run().catch(err => {
-    console.error("Erro inesperado:", err);
-    process.exit(1);
-});

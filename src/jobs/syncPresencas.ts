@@ -1,23 +1,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import connectDB from '@/config/database';
+import { DADOS_DIR } from '@/config/paths';
 import { Deputado } from '@/models/deputado.model';
+import { executarJob } from '@/jobs/runner';
+import { parseArgs, resolverLegislatura } from '@/utils/cliArgs.util';
 import { LEGISLATURA_PADRAO, getPeriodoDatasByLegislatura } from '@/utils/legislatura.util';
 
-const EVENTOS_DIR = path.resolve(__dirname, '../../../dados/eventos');
-const PRESENCAS_DIR = path.resolve(__dirname, '../../../dados/presencas');
+const EVENTOS_DIR = path.join(DADOS_DIR, 'eventos');
+const PRESENCAS_DIR = path.join(DADOS_DIR, 'presencas');
 
-const getLegislaturaArg = (): number => {
-    const arg = process.argv.find(a => a.startsWith('--legislatura='));
-    if (arg) {
-        const val = Number(arg.split('=')[1]);
-        if (!isNaN(val)) return val;
-    }
-    return Number(process.env.LEGISLATURA_ATUAL ?? LEGISLATURA_PADRAO);
-};
-
-async function run() {
-    const idLegislatura = getLegislaturaArg();
+export const syncPresencas = async (idLegislatura: number): Promise<void> => {
     const { inicio: inicioPeriodo, fim: fimPeriodo } = getPeriodoDatasByLegislatura(idLegislatura);
 
     console.log(`[syncPresencas] Iniciando sincronização de presenças para a legislatura ${idLegislatura} (${inicioPeriodo.toISOString().slice(0, 10)} até ${fimPeriodo.toISOString().slice(0, 10)})...`);
@@ -27,8 +19,7 @@ async function run() {
     const eventosValidos = new Map<number, Date>();
     
     if (!fs.existsSync(EVENTOS_DIR)) {
-        console.error(`Diretório de eventos não encontrado: ${EVENTOS_DIR}`);
-        process.exit(1);
+        throw new Error(`Diretório de eventos não encontrado: ${EVENTOS_DIR}`);
     }
 
     const arquivosEventos = fs.readdirSync(EVENTOS_DIR).filter(f => f.endsWith('.json'));
@@ -63,8 +54,7 @@ async function run() {
     const presencasPorDeputado = new Map<number, number>();
 
     if (!fs.existsSync(PRESENCAS_DIR)) {
-        console.error(`Diretório de presenças não encontrado: ${PRESENCAS_DIR}`);
-        process.exit(1);
+        throw new Error(`Diretório de presenças não encontrado: ${PRESENCAS_DIR}`);
     }
 
     const arquivosPresencas = fs.readdirSync(PRESENCAS_DIR).filter(f => f.endsWith('.json'));
@@ -86,10 +76,6 @@ async function run() {
     console.log(`Contabilizadas presenças para ${presencasPorDeputado.size} deputados diferentes.`);
 
     // 3. Atualizar no banco de dados
-    console.log("Conectando ao MongoDB...");
-    await connectDB();
-    console.log("Conectado com sucesso.");
-
     console.log("Atualizando dados no banco...");
     
     // Obter os deputados, seus mandatos e ultimoStatus
@@ -186,10 +172,8 @@ async function run() {
     }
 
     console.log("Sincronização de presenças finalizada com sucesso!");
-    process.exit(0);
-}
+};
 
-run().catch(err => {
-    console.error("Erro durante a sincronização de presenças:", err);
-    process.exit(1);
-});
+if (require.main === module) {
+    executarJob("syncPresencas", () => syncPresencas(resolverLegislatura(parseArgs())));
+}

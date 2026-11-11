@@ -1,13 +1,8 @@
-import connectDB from "@/config/database";
 import { Deputado } from "@/models/deputado.model";
+import { executarJob } from "@/jobs/runner";
 import { LEGISLATURA_PADRAO } from "@/utils/legislatura.util";
 
-const run = async (): Promise<void> => {
-    console.log("[migrateMandatos] Conectando ao MongoDB...");
-    await connectDB();
-    console.log("[migrateMandatos] Conectado com sucesso.");
-
-    const idLegislatura = Number(process.env.LEGISLATURA_MIGRACAO ?? LEGISLATURA_PADRAO);
+export const migrateMandatos = async (idLegislatura: number): Promise<void> => {
     console.log(`[migrateMandatos] Iniciando migração de mandatos para a legislatura ${idLegislatura}...`);
 
     // Busca deputados que ainda não possuem o mandato correspondente registrado
@@ -22,7 +17,7 @@ const run = async (): Promise<void> => {
 
     if (deputados.length === 0) {
         console.log(`[migrateMandatos] Nenhum deputado pendente de migração para a legislatura ${idLegislatura}.`);
-        process.exit(0);
+        return;
     }
 
     console.log(`[migrateMandatos] Processando ${deputados.length} deputados...`);
@@ -67,11 +62,8 @@ const run = async (): Promise<void> => {
 
     const result = await Deputado.bulkWrite(bulkOps as any);
     console.log(`[migrateMandatos] Migração concluída: ${result.modifiedCount} deputados atualizados.`);
-    process.exit(0);
 };
 
-run().catch(err => {
-    console.error("[migrateMandatos] Erro durante a migração:", err);
-    process.exit(1);
-});
-
+if (require.main === module) {
+    executarJob("migrateMandatos", () => migrateMandatos(Number(process.env.LEGISLATURA_MIGRACAO ?? LEGISLATURA_PADRAO)));
+}
