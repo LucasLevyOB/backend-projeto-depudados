@@ -14,7 +14,8 @@
     "sync:proposicoes": "ts-node -r tsconfig-paths/register src/jobs/syncProposicoesBusca.ts",
     "sync:presencas": "ts-node -r tsconfig-paths/register src/jobs/syncPresencas.ts",
     "sync:cadastros": "ts-node -r tsconfig-paths/register src/jobs/syncCadastros.ts",
-    "sync:anual": "ts-node -r tsconfig-paths/register src/jobs/syncDadosAnuais.ts"
+    "sync:anual": "ts-node -r tsconfig-paths/register src/jobs/syncDadosAnuais.ts",
+    "sync:local": "ts-node -r tsconfig-paths/register src/jobs/syncAll.ts"
   },
   "keywords": [],
   "author": "",

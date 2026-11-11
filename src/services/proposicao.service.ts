@@ -40,8 +40,8 @@ export class ProposicaoService {
         return await this.repositorio.findByDeputado(idDeputado, page, limit, siglaTipo, ementa, ano, idLegislatura);
     }
 
-    async findSemTemas(limit: number, codTipo?: number): Promise<IProposicao[]> {
-        return await this.repositorio.findSemTemas(limit, codTipo);
+    async findSemTemas(limit: number, codTipo?: number, anos?: number[], excluirIds?: number[]): Promise<IProposicao[]> {
+        return await this.repositorio.findSemTemas(limit, codTipo, anos, excluirIds);
     }
 
     async atualizarTemas(id: number, temas: string[]): Promise<void> {

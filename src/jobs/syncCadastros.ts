@@ -13,10 +13,10 @@ import {
 } from "@/types/camara.types";
 import { baixarParaCache, cacheJson, IOpcoesCache, lerDados } from "@/utils/cacheDownloader.util";
 import { parseArgs, resolverLegislatura } from "@/utils/cliArgs.util";
+import { API_CAMARA } from "@/utils/fontesCamara.util";
 import { fetchJson, mapComConcorrencia } from "@/utils/http.util";
 import { LEGISLATURA_PADRAO } from "@/utils/legislatura.util";
 
-const API = "https://dadosabertos.camara.leg.br/api/v2";
 const URL_DEPUTADOS_ARQUIVO = "https://dadosabertos.camara.leg.br/arquivos/deputados/json/deputados.json";
 const CONCORRENCIA_DETALHES = 5;
 
@@ -54,7 +54,7 @@ const buscarDetalhes = async (ids: number[]): Promise<IDeputadoDetalheApi[]> => 
 
     const resultados = await mapComConcorrencia(ids, CONCORRENCIA_DETALHES, async id => {
         try {
-            const { dados } = await fetchJson<IRespostaApi<IDeputadoDetalheApi>>(`${API}/deputados/${id}`);
+            const { dados } = await fetchJson<IRespostaApi<IDeputadoDetalheApi>>(`${API_CAMARA}/deputados/${id}`);
             return dados;
         } catch (erro) {
             console.error(`[syncCadastros] Falha ao buscar detalhes do deputado ${id}: ${(erro as Error).message}`);
@@ -101,7 +101,7 @@ const montarCadastro = (
 const syncPartidos = async (repo: IngestaoRepository, idLegislatura: number, opcoes: IOpcoesCache): Promise<void> => {
     const partidos = await cacheJson(
         caminhoLegislatura(idLegislatura, "partidos.json"),
-        () => buscarTodasPaginas<IPartidoApi>(`${API}/partidos?idLegislatura=${idLegislatura}&itens=100`),
+        () => buscarTodasPaginas<IPartidoApi>(`${API_CAMARA}/partidos?idLegislatura=${idLegislatura}&itens=100`),
         opcoes
     );
 
@@ -114,7 +114,7 @@ const syncPartidos = async (repo: IngestaoRepository, idLegislatura: number, opc
 const syncDeputados = async (repo: IngestaoRepository, idLegislatura: number, opcoes: IOpcoesCache): Promise<void> => {
     const listaBruta = await cacheJson(
         caminhoLegislatura(idLegislatura, "deputados-base.json"),
-        () => buscarTodasPaginas<IDeputadoListaApi>(`${API}/deputados?idLegislatura=${idLegislatura}&itens=1000`),
+        () => buscarTodasPaginas<IDeputadoListaApi>(`${API_CAMARA}/deputados?idLegislatura=${idLegislatura}&itens=1000`),
         opcoes
     );
     // A listagem pode repetir o mesmo deputado (ex.: troca de partido); fica a última ocorrência.

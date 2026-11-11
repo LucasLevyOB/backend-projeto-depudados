@@ -15,11 +15,10 @@ import {
 import { baixarParaCache, baixarZipParaCache, IOpcoesCache, lerDados } from "@/utils/cacheDownloader.util";
 import { parseArgs, resolverAno } from "@/utils/cliArgs.util";
 import { dataBrasilia } from "@/utils/data.util";
+import { obterEventosEPresencas, urlArquivoAnual, urlDespesasCsv } from "@/utils/fontesCamara.util";
 
-const ARQUIVOS = "https://dadosabertos.camara.leg.br/arquivos";
 const LOTE_DESPESAS = 5_000;
 
-const urlArquivo = (pasta: string, ano: number): string => `${ARQUIVOS}/${pasta}/json/${pasta}-${ano}.json`;
 
 const logResultado = (nome: string, total: number, r: IResultadoIngestao): void =>
     console.log(`[syncDadosAnuais] ${nome}: ${total} na fonte, ${r.inseridos} novos, ${r.atualizados} atualizados.`);
@@ -85,7 +84,7 @@ async function* lotesDeDespesas(caminho: string): AsyncGenerator<Array<Partial<I
 }
 
 const syncDespesas = async (repo: IngestaoRepository, ano: number, opcoes: IOpcoesCache): Promise<void> => {
-    const csv = await baixarZipParaCache(`https://www.camara.leg.br/cotas/Ano-${ano}.csv.zip`, caminhoAno(ano, "despesas.csv"), opcoes);
+    const csv = await baixarZipParaCache(urlDespesasCsv(ano), caminhoAno(ano, "despesas.csv"), opcoes);
     if (!csv) return;
 
     const { removidas, inseridas } = await repo.substituirDespesasAno(ano, lotesDeDespesas(csv));
@@ -120,7 +119,7 @@ const mapearProposicao = (p: IProposicaoArquivo) => ({
 });
 
 const syncProposicoes = async (repo: IngestaoRepository, ano: number, opcoes: IOpcoesCache): Promise<void> => {
-    const arquivo = await baixarParaCache(urlArquivo("proposicoes", ano), caminhoAno(ano, "proposicoes.json"), opcoes);
+    const arquivo = await baixarParaCache(urlArquivoAnual("proposicoes", ano), caminhoAno(ano, "proposicoes.json"), opcoes);
     if (!arquivo) return;
 
     const proposicoes = await lerDados<IProposicaoArquivo>(arquivo);
@@ -142,7 +141,7 @@ export const deduplicarAutores = (autores: IProposicaoAutorArquivo[]): IProposic
 };
 
 const syncAutores = async (repo: IngestaoRepository, ano: number, opcoes: IOpcoesCache): Promise<void> => {
-    const arquivo = await baixarParaCache(urlArquivo("proposicoesAutores", ano), caminhoAno(ano, "proposicoesAutores.json"), opcoes);
+    const arquivo = await baixarParaCache(urlArquivoAnual("proposicoesAutores", ano), caminhoAno(ano, "proposicoesAutores.json"), opcoes);
     if (!arquivo) return;
 
     const autores = deduplicarAutores(await lerDados<IProposicaoAutorArquivo>(arquivo));
@@ -160,7 +159,7 @@ const mapearVotacao = (v: IVotacaoArquivo) => ({
 });
 
 const syncVotacoes = async (repo: IngestaoRepository, ano: number, opcoes: IOpcoesCache): Promise<void> => {
-    const arquivo = await baixarParaCache(urlArquivo("votacoes", ano), caminhoAno(ano, "votacoes.json"), opcoes);
+    const arquivo = await baixarParaCache(urlArquivoAnual("votacoes", ano), caminhoAno(ano, "votacoes.json"), opcoes);
     if (!arquivo) return;
 
     const votacoes = await lerDados<IVotacaoArquivo>(arquivo);
@@ -174,19 +173,13 @@ const mapearVoto = (v: IVotoArquivo) => ({
 });
 
 const syncVotos = async (repo: IngestaoRepository, ano: number, opcoes: IOpcoesCache): Promise<void> => {
-    const arquivo = await baixarParaCache(urlArquivo("votacoesVotos", ano), caminhoAno(ano, "votacoesVotos.json"), opcoes);
+    const arquivo = await baixarParaCache(urlArquivoAnual("votacoesVotos", ano), caminhoAno(ano, "votacoesVotos.json"), opcoes);
     if (!arquivo) return;
 
     const votos = await lerDados<IVotoArquivo>(arquivo);
     logResultado(`Votos ${ano}`, votos.length, await repo.upsertVotosDeputados(votos.map(mapearVoto)));
 };
 
-// ---------- Eventos e presenças (só cache; consumidos pelo syncPresencas) ----------
-
-export const baixarEventosEPresencas = async (ano: number, opcoes: IOpcoesCache = {}): Promise<void> => {
-    await baixarParaCache(urlArquivo("eventos", ano), caminhoAno(ano, "eventos.json"), opcoes);
-    await baixarParaCache(urlArquivo("eventosPresencaDeputados", ano), caminhoAno(ano, "presencas.json"), opcoes);
-};
 
 export const syncDadosAnuais = async (ano: number, opcoes: IOpcoesCache = {}): Promise<void> => {
     console.log(`[syncDadosAnuais] Ano ${ano}${opcoes.force ? " (forçando download)" : ""}.`);
@@ -197,7 +190,8 @@ export const syncDadosAnuais = async (ano: number, opcoes: IOpcoesCache = {}): P
     await syncAutores(repo, ano, opcoes);
     await syncVotacoes(repo, ano, opcoes);
     await syncVotos(repo, ano, opcoes);
-    await baixarEventosEPresencas(ano, opcoes);
+    // Eventos e presenças só vão para o cache; quem os consome é o syncPresencas.
+    await obterEventosEPresencas(ano, opcoes);
 };
 
 if (require.main === module) {

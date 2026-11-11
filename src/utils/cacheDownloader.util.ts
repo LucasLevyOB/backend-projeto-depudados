@@ -8,7 +8,7 @@ export interface IOpcoesCache {
     force?: boolean;
 }
 
-const existe = async (caminho: string): Promise<boolean> =>
+export const existe = async (caminho: string): Promise<boolean> =>
     fs.access(caminho).then(() => true, () => false);
 
 /** Grava em `<destino>.tmp` e renomeia, para o cache nunca guardar um arquivo pela metade. */

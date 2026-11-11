@@ -1,6 +1,6 @@
 import { AnyBulkWriteOperation, Model, mongo } from "mongoose";
 import Partido from "@/models/partido.model";
-import { Deputado, IDeputado, IMandatoLegislatura, IStatus } from "@/models/deputado.model";
+import { Deputado, IDeputado, IMandatoLegislatura, IResumoPresencas, IStatus } from "@/models/deputado.model";
 import { Despesa, IDespesa } from "@/models/despesa.model";
 import { Proposicao, IProposicao } from "@/models/proposicao.model";
 import { ProposicaoAutor, IProposicaoAutor } from "@/models/proposicaoAutor.model";
@@ -107,6 +107,50 @@ export class IngestaoRepository {
                 updateOne: {
                     filter: { _id: idDeputado, "mandatos.idLegislatura": idLegislatura },
                     update: { $set: { "mandatos.$.ultimoStatus": ultimoStatus } },
+                },
+            })),
+            escreverEm(Deputado)
+        );
+    }
+
+    /**
+     * Deputados com mandato na legislatura, com o status desse mandato.
+     * Se o mandato não tiver situação, usa o status da raiz só quando ele é da mesma legislatura.
+     */
+    async listarDeputadosComMandato(
+        idLegislatura: number
+    ): Promise<Array<{ _id: number; nome: string; statusMandato?: IStatus }>> {
+        const deputados = await Deputado.find(
+            { "mandatos.idLegislatura": idLegislatura },
+            { _id: 1, nome: 1, ultimoStatus: 1, mandatos: 1 }
+        ).lean();
+
+        return deputados.map(d => {
+            const statusMandato = d.mandatos?.find(m => m.idLegislatura === idLegislatura)?.ultimoStatus;
+            const statusRaiz = d.ultimoStatus?.idLegislatura === idLegislatura ? d.ultimoStatus : undefined;
+            return {
+                _id: d._id,
+                nome: statusMandato?.nomeEleitoral || d.nome,
+                statusMandato: statusMandato?.situacao ? statusMandato : statusRaiz,
+            };
+        });
+    }
+
+    async atualizarResumoPresencas(
+        idLegislatura: number,
+        itens: Array<{ idDeputado: number; resumoPresencas: IResumoPresencas }>,
+        espelharNaRaiz: boolean
+    ): Promise<IResultadoIngestao> {
+        return executarEmLotes(
+            itens.map(({ idDeputado, resumoPresencas }) => ({
+                updateOne: {
+                    filter: { _id: idDeputado, "mandatos.idLegislatura": idLegislatura },
+                    update: {
+                        $set: {
+                            "mandatos.$.resumoPresencas": resumoPresencas,
+                            ...(espelharNaRaiz ? { resumoPresencas } : {}),
+                        },
+                    },
                 },
             })),
             escreverEm(Deputado)

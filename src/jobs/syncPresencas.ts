@@ -1,179 +1,80 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { DADOS_DIR } from '@/config/paths';
-import { Deputado } from '@/models/deputado.model';
-import { executarJob } from '@/jobs/runner';
-import { parseArgs, resolverLegislatura } from '@/utils/cliArgs.util';
-import { LEGISLATURA_PADRAO, getPeriodoDatasByLegislatura } from '@/utils/legislatura.util';
+import { executarJob } from "@/jobs/runner";
+import { IngestaoRepository } from "@/repositories/ingestao.repository";
+import { IOpcoesCache, lerDados } from "@/utils/cacheDownloader.util";
+import { parseArgs, resolverLegislatura } from "@/utils/cliArgs.util";
+import { dataBrasilia } from "@/utils/data.util";
+import { obterEventosEPresencas } from "@/utils/fontesCamara.util";
+import { getAnosByLegislatura, getPeriodoDatasByLegislatura, LEGISLATURA_PADRAO } from "@/utils/legislatura.util";
+import { calcularResumoPresencas } from "@/utils/presencas.util";
 
-const EVENTOS_DIR = path.join(DADOS_DIR, 'eventos');
-const PRESENCAS_DIR = path.join(DADOS_DIR, 'presencas');
+interface IEventoArquivo {
+    id: number;
+    dataHoraInicio: string;
+    situacao: string;
+    descricaoTipo: string;
+}
 
-export const syncPresencas = async (idLegislatura: number): Promise<void> => {
-    const { inicio: inicioPeriodo, fim: fimPeriodo } = getPeriodoDatasByLegislatura(idLegislatura);
+interface IPresencaArquivo {
+    idEvento: number;
+    idDeputado: number;
+}
 
-    console.log(`[syncPresencas] Iniciando sincronização de presenças para a legislatura ${idLegislatura} (${inicioPeriodo.toISOString().slice(0, 10)} até ${fimPeriodo.toISOString().slice(0, 10)})...`);
+const ehSessaoDeliberativaValida = (e: IEventoArquivo): boolean =>
+    e.situacao !== "Cancelada" && e.descricaoTipo === "Sessão Deliberativa";
 
-    // 1. Coletar IDs de eventos válidos no período da legislatura
-    console.log("Lendo arquivos de eventos...");
-    const eventosValidos = new Map<number, Date>();
-    
-    if (!fs.existsSync(EVENTOS_DIR)) {
-        throw new Error(`Diretório de eventos não encontrado: ${EVENTOS_DIR}`);
+/**
+ * Consolida as presenças em sessões deliberativas do Plenário para cada deputado com mandato na legislatura.
+ * Lê do cache `anos/{ano}/eventos.json` e `presencas.json` (baixando o que faltar) para cada ano já iniciado.
+ */
+export const syncPresencas = async (idLegislatura: number, opcoes: IOpcoesCache = {}): Promise<void> => {
+    const { inicio, fim } = getPeriodoDatasByLegislatura(idLegislatura);
+    const anos = getAnosByLegislatura(idLegislatura).filter(ano => ano <= new Date().getFullYear());
+    console.log(`[syncPresencas] Legislatura ${idLegislatura} (${inicio.toISOString().slice(0, 10)} até ${fim.toISOString().slice(0, 10)}), anos ${anos.join(", ")}.`);
+
+    const arquivos = await Promise.all(anos.map(ano => obterEventosEPresencas(ano, opcoes)));
+
+    // 1. Sessões válidas dentro do período da legislatura
+    const sessoes = new Map<number, Date>();
+    for (const { eventos } of arquivos) {
+        if (!eventos) continue;
+        (await lerDados<IEventoArquivo>(eventos))
+            .filter(ehSessaoDeliberativaValida)
+            .forEach(e => {
+                const data = dataBrasilia(e.dataHoraInicio);
+                if (e.id && data && data >= inicio && data <= fim) sessoes.set(e.id, data);
+            });
     }
+    console.log(`[syncPresencas] ${sessoes.size} sessões deliberativas válidas.`);
 
-    const arquivosEventos = fs.readdirSync(EVENTOS_DIR).filter(f => f.endsWith('.json'));
-    
-    for (const arquivo of arquivosEventos) {
-        const caminho = path.join(EVENTOS_DIR, arquivo);
-        const conteudo = fs.readFileSync(caminho, 'utf-8');
-        const eventos = JSON.parse(conteudo);
-
-        for (const evento of eventos) {
-            if (evento.situacao !== 'Cancelada' && evento.descricaoTipo === 'Sessão Deliberativa') {
-                const idEvento = evento.id || evento._id;
-                const dataInicio = new Date(evento.dataHoraInicio);
-                
-                if (
-                    idEvento &&
-                    !isNaN(dataInicio.getTime()) &&
-                    dataInicio >= inicioPeriodo &&
-                    dataInicio <= fimPeriodo
-                ) {
-                    eventosValidos.set(idEvento, dataInicio);
-                }
-            }
-        }
-    }
-
-    const totalEventosGlobais = eventosValidos.size;
-    console.log(`Encontrados ${totalEventosGlobais} eventos válidos no período da legislatura ${idLegislatura}.`);
-
-    // 2. Contabilizar presenças por deputado
-    console.log("Lendo arquivos de presenças...");
+    // 2. Presenças por deputado nessas sessões
     const presencasPorDeputado = new Map<number, number>();
-
-    if (!fs.existsSync(PRESENCAS_DIR)) {
-        throw new Error(`Diretório de presenças não encontrado: ${PRESENCAS_DIR}`);
+    for (const { presencas } of arquivos) {
+        if (!presencas) continue;
+        (await lerDados<IPresencaArquivo>(presencas))
+            .filter(p => sessoes.has(p.idEvento))
+            .forEach(p => presencasPorDeputado.set(p.idDeputado, (presencasPorDeputado.get(p.idDeputado) ?? 0) + 1));
     }
+    console.log(`[syncPresencas] Presenças contabilizadas para ${presencasPorDeputado.size} deputados.`);
 
-    const arquivosPresencas = fs.readdirSync(PRESENCAS_DIR).filter(f => f.endsWith('.json'));
+    // 3. Só deputados que já têm o mandato (criado pelo syncCadastros). Antes, o job criava mandatos
+    // para todos os deputados do banco, e quem não era da legislatura aparecia nela como "Exercício".
+    const repo = new IngestaoRepository();
+    const deputados = await repo.listarDeputadosComMandato(idLegislatura);
+    const datasSessoes = [...sessoes.values()];
 
-    for (const arquivo of arquivosPresencas) {
-        const caminho = path.join(PRESENCAS_DIR, arquivo);
-        const conteudo = fs.readFileSync(caminho, 'utf-8');
-        const presencas = JSON.parse(conteudo);
+    const resultado = await repo.atualizarResumoPresencas(
+        idLegislatura,
+        deputados.map(d => ({
+            idDeputado: d._id,
+            resumoPresencas: calcularResumoPresencas(d.statusMandato, datasSessoes, presencasPorDeputado.get(d._id) ?? 0),
+        })),
+        idLegislatura === LEGISLATURA_PADRAO
+    );
 
-        for (const presenca of presencas) {
-            if (eventosValidos.has(presenca.idEvento)) {
-                const idDeputado = presenca.idDeputado;
-                const totalAtual = presencasPorDeputado.get(idDeputado) || 0;
-                presencasPorDeputado.set(idDeputado, totalAtual + 1);
-            }
-        }
-    }
-
-    console.log(`Contabilizadas presenças para ${presencasPorDeputado.size} deputados diferentes.`);
-
-    // 3. Atualizar no banco de dados
-    console.log("Atualizando dados no banco...");
-    
-    // Obter os deputados, seus mandatos e ultimoStatus
-    const todosDeputados = await Deputado.find({}, { _id: 1, ultimoStatus: 1, mandatos: 1 });
-    
-    const bulkOps = todosDeputados.map(deputado => {
-        const idDeputado = deputado._id;
-        const mandato = deputado.mandatos?.find(m => m.idLegislatura === idLegislatura);
-        const statusMandato = mandato?.ultimoStatus ?? deputado.ultimoStatus;
-        
-        let sessoesAptas = 0;
-        
-        if (statusMandato && statusMandato.situacao && statusMandato.data) {
-            const dataStatus = new Date(statusMandato.data);
-            const situacao = statusMandato.situacao;
-
-            for (const dataEvento of eventosValidos.values()) {
-                if (situacao === 'Exercício') {
-                    if (dataEvento >= dataStatus) {
-                        sessoesAptas++;
-                    }
-                } else {
-                    if (dataEvento <= dataStatus) {
-                        sessoesAptas++;
-                    }
-                }
-            }
-        } else {
-            sessoesAptas = totalEventosGlobais;
-        }
-
-        const totalPresencas = presencasPorDeputado.get(idDeputado) || 0;
-        
-        // Garante que sessoesAptas seja no mínimo igual a totalPresencas para evitar % > 100
-        const sessoesBase = Math.max(sessoesAptas, totalPresencas);
-        const totalAusencias = sessoesBase - totalPresencas;
-        
-        const percentual = sessoesBase > 0 
-            ? Math.min(100, (totalPresencas / sessoesBase) * 100) 
-            : 0;
-
-        const resumoPresencas = {
-            totalSessoes: sessoesBase,
-            presencas: totalPresencas,
-            ausencias: totalAusencias,
-            percentualPresenca: parseFloat(percentual.toFixed(2))
-        };
-
-        if (mandato) {
-            return {
-                updateOne: {
-                    filter: { _id: idDeputado, "mandatos.idLegislatura": idLegislatura },
-                    update: {
-                        $set: {
-                            "mandatos.$.resumoPresencas": resumoPresencas,
-                            ...(idLegislatura === LEGISLATURA_PADRAO ? { resumoPresencas } : {})
-                        }
-                    }
-                }
-            };
-        } else {
-            return {
-                updateOne: {
-                    filter: { _id: idDeputado },
-                    update: {
-                        $push: {
-                            mandatos: {
-                                idLegislatura,
-                                ultimoStatus: statusMandato ?? {},
-                                estatisticas: {
-                                    gastosDespesas: 0,
-                                    projetosDeLei: 0,
-                                    totalProposicoes: 0,
-                                    scoreEficiencia: 0,
-                                    custoPorProjetoLei: null,
-                                    custoPorProposicao: null,
-                                    temasProposicoes: []
-                                },
-                                resumoPresencas
-                            }
-                        },
-                        ...(idLegislatura === LEGISLATURA_PADRAO ? { $set: { resumoPresencas } } : {})
-                    }
-                }
-            };
-        }
-    });
-
-    if (bulkOps.length > 0) {
-        const result = await Deputado.bulkWrite(bulkOps as any);
-        console.log(`Atualização concluída: ${result.modifiedCount} deputados modificados.`);
-    } else {
-        console.log("Nenhum deputado encontrado no banco para atualizar.");
-    }
-
-    console.log("Sincronização de presenças finalizada com sucesso!");
+    console.log(`[syncPresencas] ${deputados.length} deputados com mandato ${idLegislatura}, ${resultado.atualizados} atualizados.`);
 };
 
 if (require.main === module) {
-    executarJob("syncPresencas", () => syncPresencas(resolverLegislatura(parseArgs())));
+    const args = parseArgs();
+    executarJob("syncPresencas", () => syncPresencas(resolverLegislatura(args), { force: args.forceDownload }));
 }
