@@ -79,7 +79,11 @@ export class ClassificacaoTemaService {
         this.retryDelayMs = retryDelayMs;
     }
 
-    async classificar(ementa: string, keywords: string = ""): Promise<TemaLegislativo[]> {
+    /**
+     * Classifica a ementa. Retorna `null` se o Ollama falhar em todas as tentativas:
+     * gravar "Outros" nesse caso marcaria a proposição como classificada para sempre.
+     */
+    async classificar(ementa: string, keywords: string = ""): Promise<TemaLegislativo[] | null> {
         const prompt = buildPrompt(ementa, keywords);
 
         for (let tentativa = 1; tentativa <= this.maxRetries; tentativa++) {
@@ -91,7 +95,7 @@ export class ClassificacaoTemaService {
 
                 if (isUltimaTentativa) {
                     console.error(`[ClassificacaoTema] Falhou após ${this.maxRetries} tentativas:`, err);
-                    return ["Outros"];
+                    return null;
                 }
 
                 console.warn(`[ClassificacaoTema] Tentativa ${tentativa} falhou, tentando novamente em ${this.retryDelayMs}ms...`);
@@ -99,7 +103,27 @@ export class ClassificacaoTemaService {
             }
         }
 
-        return ["Outros"];
+        return null;
+    }
+
+    /** Confere se o Ollama responde e se o modelo configurado está instalado. Lança erro descritivo se não. */
+    async verificarDisponibilidade(): Promise<void> {
+        if (!OLLAMA_URL || !OLLAMA_MODEL) {
+            throw new Error("OLLAMA_URL e OLLAMA_MODEL precisam estar definidos no .env para classificar temas.");
+        }
+
+        const response = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(10_000) })
+            .catch((err: Error) => { throw new Error(`Ollama indisponível em ${OLLAMA_URL}: ${err.message}`); });
+
+        if (!response.ok) {
+            throw new Error(`Ollama respondeu ${response.status} em ${OLLAMA_URL}/api/tags.`);
+        }
+
+        const { models } = await response.json() as { models: Array<{ name: string }> };
+        const instalado = models.some(m => m.name === OLLAMA_MODEL || m.name === `${OLLAMA_MODEL}:latest`);
+        if (!instalado) {
+            throw new Error(`Modelo "${OLLAMA_MODEL}" não encontrado no Ollama. Instalados: ${models.map(m => m.name).join(", ") || "nenhum"}.`);
+        }
     }
 
     getTemasList(): readonly string[] {

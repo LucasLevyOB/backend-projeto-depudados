@@ -1,62 +1,71 @@
 import { DeputadoRepository } from "@/repositories/deputado.repository";
-import { ProposicaoAutorRepository } from "@/repositories/proposicaoAutor.repository";
-import { ProposicaoRepository } from "@/repositories/proposicao.repository";
-import { DespesaRepository } from "@/repositories/despesa.repository";
-import { VotoDeputadoRepository } from "@/repositories/votoDeputado.repository";
-import { VotacaoRepository } from "@/repositories/votacao.repository";
 import { ClassificacaoTemaService } from "@/services/classificacaoTema.service";
-import { ProposicaoAutorService } from "@/services/proposicaoAutor.service";
 import { ProposicaoService } from "@/services/proposicao.service";
-import { DespesaService } from "@/services/despesa.service";
-import { VotoDeputadoService } from "@/services/votoDeputado.service";
-import { VotacaoService } from "@/services/votacao.service";
 import { DeputadoService } from "@/services/deputado.service";
-import connectDB from "@/config/database";
-import { LEGISLATURA_PADRAO } from "@/utils/legislatura.util";
+import { criarServicos } from "@/jobs/container";
+import { executarJob } from "@/jobs/runner";
+import { parseArgs, resolverLegislatura } from "@/utils/cliArgs.util";
+import { getAnosByLegislatura } from "@/utils/legislatura.util";
 
 const LOTE_PROPOSICOES = Number(process.env.LOTE_PROPOSICOES ?? 50);
+const COD_TIPO_PL = 139;
 
-const getLegislaturaArg = (): number => {
-    const arg = process.argv.find(a => a.startsWith('--legislatura='));
-    if (arg) {
-        const val = Number(arg.split('=')[1]);
-        if (!isNaN(val)) return val;
-    }
-    return Number(process.env.LEGISLATURA_ATUAL ?? LEGISLATURA_PADRAO);
-};
-
-const classificarProposicoes = async (
+/**
+ * Classifica via Ollama os PLs sem tema dos anos informados.
+ * Falhas não são gravadas (ficam para a próxima execução) e são excluídas da busca nesta execução,
+ * para o laço não pegar as mesmas proposições de novo. Se um lote inteiro falhar, o Ollama
+ * provavelmente caiu e o job é interrompido.
+ */
+export const classificarProposicoes = async (
     proposicaoService: ProposicaoService,
-    classificacaoService: ClassificacaoTemaService
+    classificacaoService: ClassificacaoTemaService,
+    anos: number[]
 ): Promise<void> => {
-    let totalProcessadas = 0;
-    let lote = await proposicaoService.findSemTemas(LOTE_PROPOSICOES, 139);
+    const falhas: number[] = [];
+    let totalClassificadas = 0;
+
+    const proximoLote = () => proposicaoService.findSemTemas(LOTE_PROPOSICOES, COD_TIPO_PL, anos, falhas);
+    let lote = await proximoLote();
 
     while (lote.length > 0) {
         console.log(`[syncTemas] Processando lote de ${lote.length} proposições concorrentemente...`);
 
-        const promessasClassificacao = [];
-        for (const proposicao of lote) {
-            const promessa = classificacaoService.classificar(
-                proposicao.ementa ?? "",
-                proposicao.keywords ?? ""
-            ).then((temas) => ({ id: proposicao._id, temas }));
-            promessasClassificacao.push(promessa);
+        const resultados = await Promise.all(
+            lote.map(proposicao =>
+                classificacaoService
+                    .classificar(proposicao.ementa ?? "", proposicao.keywords ?? "")
+                    .then(temas => ({ id: proposicao._id, temas }))
+            )
+        );
+
+        const sucessos = resultados.filter((r): r is { id: number; temas: string[] } => r.temas !== null);
+        if (sucessos.length === 0) {
+            throw new Error(`Todas as ${lote.length} classificações do lote falharam; verifique o Ollama. ${totalClassificadas} classificadas até aqui.`);
         }
 
-        const resultados = await Promise.all(promessasClassificacao);
-        await proposicaoService.atualizarTemasLote(resultados);
+        falhas.push(...resultados.filter(r => r.temas === null).map(r => r.id));
+        await proposicaoService.atualizarTemasLote(sucessos);
 
-        totalProcessadas += lote.length;
-        console.log(`[syncTemas] ${totalProcessadas} proposições classificadas.`);
+        totalClassificadas += sucessos.length;
+        console.log(`[syncTemas] ${totalClassificadas} proposições classificadas, ${falhas.length} falhas.`);
 
-        lote = await proposicaoService.findSemTemas(LOTE_PROPOSICOES, 139);
+        lote = await proximoLote();
     }
 
-    console.log(`[syncTemas] Classificação concluída. Total: ${totalProcessadas} proposições.`);
+    console.log(`[syncTemas] Classificação concluída: ${totalClassificadas} classificadas, ${falhas.length} falhas (serão tentadas na próxima execução).`);
 };
 
-const agregarTemasPorDeputado = async (
+/** Classifica os PLs sem tema dos anos da legislatura, conferindo antes se o Ollama está no ar. */
+export const classificarTemas = async (idLegislatura: number): Promise<void> => {
+    const anos = getAnosByLegislatura(idLegislatura);
+    const classificacaoService = new ClassificacaoTemaService();
+    await classificacaoService.verificarDisponibilidade();
+
+    console.log(`[syncTemas] Classificando PLs sem tema de ${anos.join(", ")} via Ollama...`);
+    await classificarProposicoes(criarServicos().proposicaoService, classificacaoService, anos);
+};
+
+export const agregarTemasPorDeputado = async (
     deputadoService: DeputadoService,
     deputadoRepository: DeputadoRepository,
     idLegislatura: number
@@ -67,7 +76,7 @@ const agregarTemasPorDeputado = async (
     let totalAtualizados = 0;
 
     for (const deputado of deputados) {
-        await deputadoService.syncTemasProposicoes(deputado._id, [139], idLegislatura);
+        await deputadoService.syncTemasProposicoes(deputado._id, [COD_TIPO_PL], idLegislatura);
         totalAtualizados++;
 
         if (totalAtualizados % 50 === 0) {
@@ -78,48 +87,17 @@ const agregarTemasPorDeputado = async (
     console.log(`[syncTemas] Agregação concluída. Total: ${totalAtualizados} deputados.`);
 };
 
-async function run() {
-    const idLegislatura = getLegislaturaArg();
+/** Classificação + agregação por deputado (o `syncEstatisticas` também agrega; o `sync:local` só classifica). */
+export const syncTemas = async (idLegislatura: number): Promise<void> => {
     console.log(`[syncTemas] Executando para a legislatura ${idLegislatura}...`);
+    await classificarTemas(idLegislatura);
 
-    console.log("[syncTemas] Conectando ao MongoDB...");
-    await connectDB();
-    console.log("[syncTemas] Conectado com sucesso.");
-
-    const deputadoRepository = new DeputadoRepository();
-    const proposicaoAutorRepository = new ProposicaoAutorRepository();
-    const proposicaoRepository = new ProposicaoRepository();
-    const despesaRepository = new DespesaRepository();
-    const votoDeputadoRepository = new VotoDeputadoRepository();
-    const votacaoRepository = new VotacaoRepository();
-
-    const classificacaoService = new ClassificacaoTemaService();
-    const proposicaoAutorService = new ProposicaoAutorService(proposicaoAutorRepository);
-    const proposicaoService = new ProposicaoService(proposicaoRepository);
-    const despesaService = new DespesaService(despesaRepository);
-    const votoDeputadoService = new VotoDeputadoService(votoDeputadoRepository);
-    const votacaoService = new VotacaoService(votacaoRepository);
-
-    const deputadoService = new DeputadoService(
-        deputadoRepository,
-        proposicaoAutorService,
-        proposicaoService,
-        despesaService,
-        votoDeputadoService,
-        votacaoService
-    );
-
-    console.log("[syncTemas] Iniciando classificação de temas das proposições via Ollama...");
-    await classificarProposicoes(proposicaoService, classificacaoService);
-
-    console.log("[syncTemas] Iniciando agregação de temas por deputado...");
+    const { deputadoRepository, deputadoService } = criarServicos();
     await agregarTemasPorDeputado(deputadoService, deputadoRepository, idLegislatura);
 
     console.log("[syncTemas] Sincronização finalizada com sucesso!");
-    process.exit(0);
-}
+};
 
-run().catch(err => {
-    console.error("[syncTemas] Erro durante a execução:", err);
-    process.exit(1);
-});
+if (require.main === module) {
+    executarJob("syncTemas", () => syncTemas(resolverLegislatura(parseArgs())));
+}
