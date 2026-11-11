@@ -2,17 +2,18 @@ import mongoose from "mongoose";
 import { conectarBanco } from "@/config/database";
 import { executarJob } from "@/jobs/runner";
 import { imprimirVerificacoes, validarLocal } from "@/jobs/validarLocal";
-import { CATALOGO_PROMOCAO, NOMES_ALTERNATIVOS, PromocaoRepository } from "@/repositories/promocao.repository";
+import { CATALOGO_PROMOCAO, IFiltroPromocao, NOMES_ALTERNATIVOS, PromocaoRepository } from "@/repositories/promocao.repository";
 import { parseArgs } from "@/utils/cliArgs.util";
 import { getLegislaturaByAno, LEGISLATURA_PADRAO } from "@/utils/legislatura.util";
 import { garantirBancoLocal, mesmoBanco } from "@/utils/mongoUri.util";
 
-export interface IOpcoesPromocao {
-    /** Promove só os dados transacionais deste ano (partidos e deputados vão sempre inteiros). */
-    ano?: number;
+export interface IOpcoesPromocao extends IFiltroPromocao {
     /** Sem `apply`, apenas simula: mostra o que seria escrito. */
     apply: boolean;
 }
+
+const FLAG_SOMENTE_USADAS = "--somente-proposicoes-usadas";
+const mb = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(0)} MB`;
 
 const garantirUris = (): { uriAtlas: string } => {
     garantirBancoLocal(process.env.DATABASE_URL);
@@ -30,11 +31,12 @@ const garantirUris = (): { uriAtlas: string } => {
  * Copia os dados já processados e validados do banco local para o Atlas, sem reprocessar IA nem scraping.
  * Bloqueia se a validação local tiver erros ou se o Atlas usar nomes de coleção diferentes dos models.
  */
-export const promoverParaAtlas = async ({ ano, apply }: IOpcoesPromocao): Promise<void> => {
+export const promoverParaAtlas = async ({ ano, apply, somenteProposicoesUsadas }: IOpcoesPromocao): Promise<void> => {
     const { uriAtlas } = garantirUris();
     const idLegislatura = ano ? getLegislaturaByAno(ano) : LEGISLATURA_PADRAO;
 
-    console.log(`[promoteToAtlas] ${apply ? "APLICANDO" : "SIMULAÇÃO"}: ${ano ? `ano ${ano}` : "todos os anos"} (legislatura ${idLegislatura}).\n`);
+    console.log(`[promoteToAtlas] ${apply ? "APLICANDO" : "SIMULAÇÃO"}: ${ano ? `ano ${ano}` : "todos os anos"} (legislatura ${idLegislatura})` +
+        `${somenteProposicoesUsadas ? ", só proposições de deputados ou votadas" : ""}.\n`);
 
     const verificacoes = await validarLocal(idLegislatura);
     imprimirVerificacoes(verificacoes);
@@ -59,15 +61,22 @@ export const promoverParaAtlas = async ({ ano, apply }: IOpcoesPromocao): Promis
 
         const plano = await Promise.all(
             CATALOGO_PROMOCAO.map(async c => {
-                const filtro = await c.filtro(mongoose.connection, ano);
-                return { c, filtro, ...(await repo.contar(c, filtro)) };
+                const filtro = await c.filtro(mongoose.connection, { ano, somenteProposicoesUsadas });
+                const [contagem, bytes] = await Promise.all([repo.contar(c, filtro), repo.tamanhoNaOrigem(c, filtro)]);
+                return { c, filtro, bytes, ...contagem };
             })
         );
 
-        console.log("\nColeção                Local    Atlas (antes)  Ação");
-        plano.forEach(({ c, origem, destino: noDestino }) =>
-            console.log(`${c.nome.padEnd(20)} ${String(origem).padStart(8)} ${String(noDestino).padStart(14)}  ${c.substituirPorAno ? "substituir por ano" : "upsert por chave"}${colecoesAtlas.has(c.nome) ? "" : " (coleção nova no Atlas)"}`)
+        console.log("\nColeção                Local   Tamanho  Atlas (antes)  Ação");
+        plano.forEach(({ c, origem, bytes, destino: noDestino }) =>
+            console.log(`${c.nome.padEnd(20)} ${String(origem).padStart(8)} ${mb(bytes).padStart(9)} ${String(noDestino).padStart(14)}  ` +
+                `${c.substituirPorAno ? "substituir por ano" : "upsert por chave"}${colecoesAtlas.has(c.nome) ? "" : " (coleção nova no Atlas)"}`)
         );
+        // Tamanho dos documentos sem compressão e sem índices; o que já existe no Atlas fora deste filtro não entra na conta.
+        console.log(`${"Total promovido".padEnd(29)} ${mb(plano.reduce((s, p) => s + p.bytes, 0)).padStart(9)}`);
+        if (!somenteProposicoesUsadas) {
+            console.log(`Dica: ${FLAG_SOMENTE_USADAS} deixa de fora as proposições que a API não consulta.`);
+        }
 
         if (!apply) {
             console.log("\nSimulação: nada foi escrito. Para aplicar, rode novamente com --apply.");
@@ -103,5 +112,9 @@ if (require.main === module) {
         console.error(`[promoteToAtlas] ${(erro as Error).message}`);
         process.exit(1);
     }
-    executarJob("promoteToAtlas", () => promoverParaAtlas({ ano: args.ano, apply: args.apply }));
+    executarJob("promoteToAtlas", () => promoverParaAtlas({
+        ano: args.ano,
+        apply: args.apply,
+        somenteProposicoesUsadas: process.argv.includes(FLAG_SOMENTE_USADAS),
+    }));
 }

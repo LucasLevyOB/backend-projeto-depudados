@@ -14,6 +14,7 @@ import {
     chaveVotacao,
     chaveVotoDeputado,
 } from "@/repositories/chavesUpsert";
+import { getAnosByLegislatura } from "@/utils/legislatura.util";
 
 /** `_id` aqui pode ser número (deputados, proposições), string (votações) ou ObjectId. */
 type Doc = { _id: number | string | mongo.ObjectId; [campo: string]: unknown };
@@ -31,8 +32,8 @@ export interface IColecaoPromocao {
     schema: Schema;
     /** Chave natural: identidade do documento nos dois bancos (os `_id`s de autores, votos e despesas diferem). */
     chave: (doc: Doc) => Filtro;
-    /** Subconjunto a promover; `ano` ausente = coleção inteira. Consultas auxiliares usam o banco de origem. */
-    filtro: (origem: Connection, ano?: number) => Promise<Filtro>;
+    /** Subconjunto a promover. Consultas auxiliares usam o banco de origem. */
+    filtro: (origem: Connection, opcoes: IFiltroPromocao) => Promise<Filtro>;
     /** Despesas não têm chave natural confiável: o ano inteiro é substituído no destino. */
     substituirPorAno?: boolean;
 }
@@ -48,6 +49,57 @@ const intervaloDoAno = (ano: number) => ({ $gte: new Date(Date.UTC(ano, 0, 1)), 
 const distinct = (origem: Connection, colecao: string, campo: string, filtro: Filtro): Promise<unknown[]> =>
     origem.db!.collection<Doc>(colecao).distinct(campo, filtro);
 
+export interface IFiltroPromocao {
+    /** Só os dados transacionais deste ano (partidos e deputados vão sempre inteiros). */
+    ano?: number;
+    /**
+     * Só as proposições que a API consulta: as de autoria de deputados e as referenciadas por votações.
+     * O arquivo da Câmara traz também as do Senado, do Executivo etc., que ocupam espaço sem uso.
+     */
+    somenteProposicoesUsadas?: boolean;
+}
+
+/**
+ * Proposições que a tela de votações procura: `ultimaApresentacaoProposicao.idProposicao`
+ * e o prefixo do id da votação (`2585316-23` → 2585316). Ver `VotacaoService`.
+ */
+const idsReferenciadosPorVotacoes = async (origem: Connection, ano?: number): Promise<number[]> => {
+    const votacoes = await origem.db!.collection<Doc>(Votacao.collection.name)
+        .find(ano ? { data: intervaloDoAno(ano) } : {}, { projection: { _id: 1, "ultimaApresentacaoProposicao.idProposicao": 1 } })
+        .toArray();
+
+    const ids = votacoes.flatMap(v => [
+        Number(String(v._id).split("-")[0]),
+        Number((v.ultimaApresentacaoProposicao as { idProposicao?: number } | undefined)?.idProposicao),
+    ]);
+    return [...new Set(ids.filter(id => Number.isInteger(id) && id > 0))];
+};
+
+/**
+ * Anos que a API consulta: os das legislaturas com mandatos no banco. Os arquivos anuais da Câmara
+ * trazem também proposições antigas que só tramitaram no ano, e a API não as lista nem as conta.
+ */
+const anosDasLegislaturasNoBanco = async (origem: Connection): Promise<number[]> => {
+    const legislaturas = (await distinct(origem, Deputado.collection.name, "mandatos.idLegislatura", {})) as number[];
+    return legislaturas.flatMap(getAnosByLegislatura);
+};
+
+/**
+ * Sem opções: todas. Com `ano`: as do ano. Com `somenteProposicoesUsadas`: só as de autoria de deputados
+ * dentro dos anos das legislaturas. Em todos os casos filtrados, mais as referenciadas pelas votações
+ * do período, mesmo que sejam de anos anteriores.
+ */
+const filtroProposicoes = async (origem: Connection, { ano, somenteProposicoesUsadas }: IFiltroPromocao): Promise<Filtro> => {
+    if (!ano && !somenteProposicoesUsadas) return {};
+
+    const doPeriodo: Filtro = ano ? { ano } : { ano: { $in: await anosDasLegislaturasNoBanco(origem) } };
+    const base: Filtro = somenteProposicoesUsadas
+        ? { ...doPeriodo, _id: { $in: (await distinct(origem, ProposicaoAutor.collection.name, "idProposicao", { idDeputadoAutor: { $ne: null } })) as number[] } }
+        : { ano };
+
+    return { $or: [base, { _id: { $in: await idsReferenciadosPorVotacoes(origem, ano) } }] };
+};
+
 /** Ordem de promoção: cadastros antes dos dados que os referenciam. */
 export const CATALOGO_PROMOCAO: IColecaoPromocao[] = [
     { ...doModel(Partido), chave: d => chavePartido(como<{ id: string }>(d)), filtro: async () => ({}) },
@@ -55,29 +107,34 @@ export const CATALOGO_PROMOCAO: IColecaoPromocao[] = [
     {
         ...doModel(Proposicao),
         chave: d => chaveProposicao(como<{ _id: number }>(d)),
-        filtro: async (_, ano) => (ano ? { ano } : {}),
+        filtro: filtroProposicoes,
     },
     {
         ...doModel(ProposicaoAutor),
         chave: d => chaveProposicaoAutor(como<{ idProposicao: number; idDeputadoAutor?: number | null; nomeAutor: string }>(d)),
-        filtro: async (origem, ano) =>
-            ano ? { idProposicao: { $in: await distinct(origem, Proposicao.collection.name, "_id", { ano }) } } : {},
+        // Os autores acompanham exatamente as proposições promovidas.
+        filtro: async (origem, opcoes) => {
+            const proposicoes = await filtroProposicoes(origem, opcoes);
+            return Object.keys(proposicoes).length === 0
+                ? {}
+                : { idProposicao: { $in: await distinct(origem, Proposicao.collection.name, "_id", proposicoes) } };
+        },
     },
     {
         ...doModel(Votacao),
         chave: d => chaveVotacao(como<{ _id: string }>(d)),
-        filtro: async (_, ano) => (ano ? { data: intervaloDoAno(ano) } : {}),
+        filtro: async (_, { ano }) => (ano ? { data: intervaloDoAno(ano) } : {}),
     },
     {
         ...doModel(VotoDeputado),
         chave: d => chaveVotoDeputado(como<{ idVotacao: string; deputado_: { id: string } }>(d)),
-        filtro: async (origem, ano) =>
+        filtro: async (origem, { ano }) =>
             ano ? { idVotacao: { $in: await distinct(origem, Votacao.collection.name, "_id", { data: intervaloDoAno(ano) }) } } : {},
     },
     {
         ...doModel(Despesa),
         chave: d => ({ _id: d._id }),
-        filtro: async (_, ano) => (ano ? { ano } : {}),
+        filtro: async (_, { ano }) => (ano ? { ano } : {}),
         substituirPorAno: true,
     },
 ];
@@ -109,6 +166,17 @@ export class PromocaoRepository {
             this.destino.db!.collection<Doc>(c.nome).countDocuments(filtro),
         ]);
         return { origem, destino };
+    }
+
+    /** Tamanho (BSON, sem compressão) dos documentos da origem que seriam promovidos. */
+    async tamanhoNaOrigem(c: IColecaoPromocao, filtro: Filtro): Promise<number> {
+        const [r] = await this.origem.db!.collection<Doc>(c.nome)
+            .aggregate<{ bytes: number }>([
+                { $match: filtro },
+                { $group: { _id: null, bytes: { $sum: { $bsonSize: "$$ROOT" } } } },
+            ])
+            .toArray();
+        return r?.bytes ?? 0;
     }
 
     /** Cria no destino os índices declarados no schema (necessários para os upserts por chave serem rápidos). */
