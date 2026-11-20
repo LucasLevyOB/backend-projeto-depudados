@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { Connection } from 'mongoose';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,3 +17,10 @@ const connectDB = async (): Promise<void> => {
 };
 
 export default connectDB;
+
+/**
+ * Conexão adicional e independente da conexão padrão (usada pela promoção para o Atlas).
+ * `autoIndex: false`: os índices do destino são criados explicitamente pelo job.
+ */
+export const conectarBanco = (uri: string): Promise<Connection> =>
+    mongoose.createConnection(uri, { autoIndex: false }).asPromise();

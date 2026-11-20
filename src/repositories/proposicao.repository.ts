@@ -205,7 +205,7 @@ export class ProposicaoRepository {
         };
     }
 
-    async findSemTemas(limit: number, codTipo?: number): Promise<IProposicao[]> {
+    async findSemTemas(limit: number, codTipo?: number, anos?: number[], excluirIds?: number[]): Promise<IProposicao[]> {
         const query: any = {
             $or: [{ temas: null }, { temas: { $size: 0 } }],
             ementa: { $exists: true, $ne: "" },
@@ -213,6 +213,14 @@ export class ProposicaoRepository {
 
         if (codTipo) {
             query.codTipo = codTipo;
+        }
+
+        if (anos && anos.length > 0) {
+            query.ano = { $in: anos };
+        }
+
+        if (excluirIds && excluirIds.length > 0) {
+            query._id = { $nin: excluirIds };
         }
 
         return await Proposicao.find(query)

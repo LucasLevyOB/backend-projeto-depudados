@@ -70,4 +70,8 @@ const DespesaSchema: Schema = new Schema({
     urlDocumento: { type: String }
 });
 
+// A ingestão substitui um ano inteiro (`deleteMany({ ano })`) e as estatísticas filtram por deputado + anos.
+DespesaSchema.index({ ano: 1 });
+DespesaSchema.index({ idDeputado: 1, ano: 1 });
+
 export const Despesa = model<IDespesa>('Despesa', DespesaSchema);

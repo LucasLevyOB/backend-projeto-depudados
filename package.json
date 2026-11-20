@@ -12,19 +12,27 @@
     "sync:temas": "ts-node -r tsconfig-paths/register src/jobs/syncTemas.ts",
     "reset:temas": "ts-node -r tsconfig-paths/register src/jobs/resetTemas.ts",
     "sync:proposicoes": "ts-node -r tsconfig-paths/register src/jobs/syncProposicoesBusca.ts",
-    "sync:presencas": "ts-node -r tsconfig-paths/register src/jobs/syncPresencas.ts"
+    "sync:presencas": "ts-node -r tsconfig-paths/register src/jobs/syncPresencas.ts",
+    "sync:cadastros": "ts-node -r tsconfig-paths/register src/jobs/syncCadastros.ts",
+    "sync:anual": "ts-node -r tsconfig-paths/register src/jobs/syncDadosAnuais.ts",
+    "sync:local": "ts-node -r tsconfig-paths/register src/jobs/syncAll.ts",
+    "validate:local": "ts-node -r tsconfig-paths/register src/jobs/validarLocal.ts",
+    "promote:atlas": "ts-node -r tsconfig-paths/register src/jobs/promoteToAtlas.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "cors": "^2.8.6",
+    "csv-parse": "^5.6.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mongoose": "^9.6.2"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/mongoose": "^5.11.96",
