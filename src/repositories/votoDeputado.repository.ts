@@ -1,6 +1,5 @@
 import { VotoDeputado, IVotoDeputado } from "@/models/votoDeputado.model";
 import { IPagedResponse } from "@/types/PagedResponse";
-import { getPeriodoDatasByLegislatura } from "@/utils/legislatura.util";
 
 export class VotoDeputadoRepository {
     async findByVotacaoId(idVotacao: string): Promise<IVotoDeputado[]> {
@@ -14,7 +13,7 @@ export class VotoDeputadoRepository {
         idVotacoes?: string[],
         idLegislatura?: number
     ): Promise<IPagedResponse<IVotoDeputado>> {
-        const query: any = { "deputado_.id": idDeputado.toString() };
+        const query: Record<string, unknown> = { "deputado_.id": idDeputado.toString() };
         
         if (idVotacoes && idVotacoes.length > 0) {
             query.idVotacao = { $in: idVotacoes };
@@ -29,8 +28,7 @@ export class VotoDeputadoRepository {
         }
 
         if (idLegislatura) {
-            const { inicio, fim } = getPeriodoDatasByLegislatura(idLegislatura);
-            query.dataHoraVoto = { $gte: inicio, $lte: fim };
+            query["deputado_.idLegislatura"] = idLegislatura.toString();
         }
 
         const total = await VotoDeputado.countDocuments(query);
@@ -83,8 +81,7 @@ export class VotoDeputadoRepository {
         }
 
         if (idLegislatura) {
-            const { inicio, fim } = getPeriodoDatasByLegislatura(idLegislatura);
-            matchStage.dataHoraVoto = { $gte: inicio, $lte: fim };
+            matchStage["deputado_.idLegislatura"] = idLegislatura.toString();
         }
 
         const skip = (page - 1) * limit;
